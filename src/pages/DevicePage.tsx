@@ -1,10 +1,8 @@
 import PageHeader from '../components/PageHeader';
+import Section from '../components/Section';
+import KeyValueRow from '../components/KeyValueRow';
+import Button from '../components/Button';
 import { useDevice } from '../composables/useDevice';
-
-// Reusable class strings — the standard React/Tailwind idiom instead of
-// @apply component layers.
-const kvRow = 'flex justify-between gap-3 border-b border-border py-2 text-[13px]';
-const kvCode = 'break-all text-right text-muted';
 
 export default function DevicePage() {
   const { info, battery, network, refresh } = useDevice();
@@ -13,43 +11,45 @@ export default function DevicePage() {
     <div className="min-h-full">
       <PageHeader title="Device" subtitle="Native info & network status" />
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Network</h3>
-        <div className={kvRow}>
-          <span>Status</span>
-          <code className={network.connected ? 'text-emerald-600' : 'text-red-600'}>
-            {network.connected ? 'online' : 'offline'}
-          </code>
-        </div>
-        <div className={kvRow}><span>Type</span><code className={kvCode}>{network.connectionType}</code></div>
-      </section>
+      <Section title="Network">
+        <KeyValueRow
+          label="Status"
+          value={network.connected ? 'online' : 'offline'}
+          success={network.connected}
+          error={!network.connected}
+        />
+        <KeyValueRow label="Type" value={network.connectionType} />
+      </Section>
 
       {info && (
-        <section className="px-5 py-3">
-          <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Device</h3>
-          <div className={kvRow}><span>Platform</span><code className={kvCode}>{info.platform}</code></div>
-          <div className={kvRow}><span>Model</span><code className={kvCode}>{info.model}</code></div>
-          <div className={kvRow}><span>OS</span><code className={kvCode}>{info.operatingSystem} {info.osVersion}</code></div>
-          <div className={kvRow}><span>Manufacturer</span><code className={kvCode}>{info.manufacturer}</code></div>
-          <div className={kvRow}><span>Virtual</span><code className={kvCode}>{info.isVirtual ? 'yes (emulator)' : 'no (real device)'}</code></div>
-          <div className={kvRow}><span>Web view</span><code className={kvCode}>{info.webViewVersion}</code></div>
-        </section>
+        <Section title="Device">
+          <KeyValueRow label="Platform" value={info.platform} />
+          <KeyValueRow label="Model" value={info.model} />
+          <KeyValueRow label="OS" value={`${info.operatingSystem} ${info.osVersion}`} />
+          <KeyValueRow label="Manufacturer" value={info.manufacturer} />
+          <KeyValueRow
+            label="Virtual"
+            value={info.isVirtual ? 'yes (emulator)' : 'no (real device)'}
+          />
+          <KeyValueRow label="Web view" value={info.webViewVersion} />
+        </Section>
       )}
 
       {battery && (
-        <section className="px-5 py-3">
-          <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Battery</h3>
-          <div className={kvRow}><span>Level</span><code className={kvCode}>{Math.round((battery.batteryLevel || 0) * 100)}%</code></div>
-          <div className={kvRow}><span>Charging</span><code className={kvCode}>{battery.isCharging ? 'yes' : 'no'}</code></div>
-        </section>
+        <Section title="Battery">
+          <KeyValueRow
+            label="Level"
+            value={`${Math.round((battery.batteryLevel || 0) * 100)}%`}
+          />
+          <KeyValueRow label="Charging" value={battery.isCharging ? 'yes' : 'no'} />
+        </Section>
       )}
 
-      <button
-        className="mx-5 mb-6 mt-3 w-[calc(100%-2.5rem)] cursor-pointer rounded-[10px] border border-border bg-surface p-3 font-semibold text-text"
-        onClick={refresh}
-      >
-        Refresh
-      </button>
+      <div className="px-5 pb-6 pt-3">
+        <Button fullWidth onClick={refresh}>
+          Refresh
+        </Button>
+      </div>
     </div>
   );
 }

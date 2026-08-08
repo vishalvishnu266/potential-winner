@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import PageHeader from '../components/PageHeader';
+import Section from '../components/Section';
+import KeyValueRow from '../components/KeyValueRow';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import Card from '../components/Card';
 import { useCamera } from '../composables/useCamera';
 import { useSqlite } from '../composables/useSqlite';
 
@@ -9,13 +14,7 @@ declare const __APP_VERSION__: string;
 
 interface NoteRow { id: number; body: string; created_at: number }
 
-// Shared class strings — kept as consts to avoid noisy repetition.
-const kvRow = 'flex justify-between gap-3 border-b border-border py-2 text-[13px]';
-const kvCode = 'break-all text-right text-muted';
 const btnRow = 'mt-2.5 flex gap-2';
-const btn = 'flex-1 cursor-pointer rounded-[10px] border border-border bg-surface p-3 font-semibold text-text disabled:opacity-50';
-const btnPrimary = btn + ' border-primary bg-primary text-white';
-const btnDanger = btn + ' border-red-200 bg-red-100 text-red-700';
 
 export default function SandboxPage() {
   const navigate = useNavigate();
@@ -100,8 +99,7 @@ export default function SandboxPage() {
     <div className="min-h-full">
       <PageHeader title="Sandbox" subtitle="Test primitives before building UI" />
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">What this app needs (before UI)</h3>
+      <Section title="What this app needs (before UI)">
         <ol className="m-0 list-decimal pl-5 text-sm leading-loose">
           <li>✅ OTA hot updates (working)</li>
           <li>✅ Geolocation / GPS (Location tab)</li>
@@ -121,46 +119,50 @@ export default function SandboxPage() {
           <li>⏳ Map SDK (Google / Mapbox)</li>
         </ol>
         <p className="mt-2.5 text-xs text-muted">Legend: ✅ done · ⏳ to do</p>
-      </section>
+      </Section>
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Take a selfie 📸</h3>
-        <div className={kvRow}><span>Permission</span><code className={kvCode}>{camPermission}</code></div>
-        {camError && <div className={kvRow}><span>Error</span><code className="text-red-600">{camError}</code></div>}
+      <Section title="Take a selfie 📸">
+        <KeyValueRow label="Permission" value={camPermission} />
+        {camError && <KeyValueRow label="Error" value={camError} error />}
 
         <div className={btnRow}>
-          <button className={btn} onClick={camCheck}>Check</button>
-          <button className={btnPrimary} onClick={camRequest}>Request</button>
+          <Button className="flex-1" onClick={camCheck}>Check</Button>
+          <Button className="flex-1" variant="primary" onClick={camRequest}>Request</Button>
         </div>
         <div className={btnRow}>
-          <button className={btnPrimary} disabled={camBusy} onClick={onTake}>
+          <Button className="flex-1" variant="primary" disabled={camBusy} onClick={onTake}>
             {camBusy ? 'Opening…' : 'Take photo'}
-          </button>
-          <button className={btn} disabled={camBusy} onClick={onPick}>Pick from library</button>
+          </Button>
+          <Button className="flex-1" disabled={camBusy} onClick={onPick}>
+            Pick from library
+          </Button>
         </div>
 
         {photoDataUrl && (
-          <div className="mt-3.5 rounded-xl border border-border bg-surface p-3">
+          <Card padded className="mt-3.5">
             <img src={photoDataUrl} alt="Captured" className="mb-2.5 block w-full rounded-lg" />
-            <div className={kvRow}><span>Size</span><code className={kvCode}>{estimatedKB} KB (base64)</code></div>
-            <button className={btnDanger} onClick={camClear}>Clear</button>
-          </div>
+            <KeyValueRow label="Size" value={`${estimatedKB} KB (base64)`} />
+            <Button fullWidth variant="danger" className="mt-2" onClick={camClear}>
+              Clear
+            </Button>
+          </Card>
         )}
-      </section>
+      </Section>
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">SQLite 🗄️</h3>
-        {sqlError && <div className={kvRow}><span>Error</span><code className="text-red-600">{sqlError}</code></div>}
-        <input
+      <Section title="SQLite 🗄️">
+        {sqlError && <KeyValueRow label="Error" value={sqlError} error />}
+        <Input
           value={noteBody}
           onChange={(e) => setNoteBody(e.target.value)}
-          className="my-2 w-full rounded-[10px] border border-border bg-surface px-3 py-2.5 text-sm text-text outline-none focus:border-primary"
+          className="my-2"
           placeholder="Type a note and press Save"
         />
         <div className={btnRow}>
-          <button className={btnPrimary} disabled={!noteBody.trim()} onClick={onAddNote}>Save</button>
-          <button className={btn} onClick={onLoadNotes}>Refresh</button>
-          <button className={btnDanger} onClick={onClearNotes}>Clear all</button>
+          <Button className="flex-1" variant="primary" disabled={!noteBody.trim()} onClick={onAddNote}>
+            Save
+          </Button>
+          <Button className="flex-1" onClick={onLoadNotes}>Refresh</Button>
+          <Button className="flex-1" variant="danger" onClick={onClearNotes}>Clear all</Button>
         </div>
         {notes.length ? (
           <div className="mt-3 overflow-hidden rounded-[10px] border border-border bg-surface">
@@ -173,22 +175,23 @@ export default function SandboxPage() {
                   <div className="break-words text-[13px] text-text">{n.body}</div>
                   <div className="mt-0.5 text-[11px] text-muted">#{n.id} · {formatWhen(n.created_at)}</div>
                 </div>
-                <button
-                  className="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-red-600"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="p-0 text-red-600"
                   onClick={() => onDeleteNote(n.id)}
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             ))}
           </div>
         ) : (
           <p className="mt-2.5 text-xs text-muted">No notes yet — data persists across app restarts.</p>
         )}
-      </section>
+      </Section>
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Deep links 🔗</h3>
+      <Section title="Deep links 🔗">
         <p className="mt-2.5 text-xs text-muted">
           Trigger from inside the app, or from the phone shell:
         </p>
@@ -196,17 +199,20 @@ export default function SandboxPage() {
   -d "dailygig://task/42?ref=push"`}</pre>
 
         <div className={btnRow}>
-          <button className={btn} onClick={() => navigate('/task/42?ref=in-app')}>Open /task/42</button>
-          <button className={btn} onClick={() => navigate('/ride/7')}>Open /ride/7</button>
+          <Button className="flex-1" onClick={() => navigate('/task/42?ref=in-app')}>
+            Open /task/42
+          </Button>
+          <Button className="flex-1" onClick={() => navigate('/ride/7')}>
+            Open /ride/7
+          </Button>
         </div>
-      </section>
+      </Section>
 
-      <section className="px-5 py-3">
-        <h3 className="my-1 mb-2.5 text-[15px] font-semibold">Build info</h3>
-        <div className={kvRow}><span>Bundle version</span><code className={kvCode}>{appVersion}</code></div>
-        <div className={kvRow}><span>Platform</span><code className={kvCode}>{platform}</code></div>
-        <div className={kvRow}><span>User agent</span><code className={kvCode + ' text-[11px]'}>{ua}</code></div>
-      </section>
+      <Section title="Build info">
+        <KeyValueRow label="Bundle version" value={appVersion} />
+        <KeyValueRow label="Platform" value={platform} />
+        <KeyValueRow label="User agent" value={ua} valueClassName="text-[11px]" />
+      </Section>
     </div>
   );
 }
