@@ -64,6 +64,18 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- Background Geolocation (@capacitor-community/background-geolocation)
+         Runs a sticky foreground service so GPS keeps ticking with the
+         screen off. Requires:
+           - ACCESS_BACKGROUND_LOCATION so the OS lets us read GPS when
+             the app is not in the foreground.
+           - FOREGROUND_SERVICE + FOREGROUND_SERVICE_LOCATION (Android 14+)
+             to allow the plugin's own persistent notification. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <!-- Camera (@capacitor/camera) — later use -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />

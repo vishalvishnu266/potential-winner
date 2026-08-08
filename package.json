@@ -12,6 +12,8 @@
     "server": "cd server && cargo run"
   },
   "dependencies": {
+    "@capacitor-community/background-geolocation": "^1.2.26",
+    "@capacitor-community/sqlite": "^7.0.0",
     "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.0.0",
     "@capacitor/camera": "^8.0.0",
@@ -25,12 +27,11 @@
     "@capacitor/network": "^8.0.0",
     "@capacitor/preferences": "^8.0.0",
     "@capacitor/push-notifications": "^8.0.0",
-    "@capacitor-community/sqlite": "^7.0.0",
-    "jeep-sqlite": "^2.8.0",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.0",
     "@capawesome/capacitor-live-update": "^8.3.0",
     "@capgo/capacitor-updater": "^8.51.3",
+    "jeep-sqlite": "^2.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2"

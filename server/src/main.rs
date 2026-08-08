@@ -1,7 +1,7 @@
 use axum::{
     extract::Query,
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -111,6 +111,58 @@ async fn check_update(Query(params): Query<UpdateQuery>) -> impl IntoResponse {
     })
 }
 
+#[derive(Deserialize, Debug)]
+struct GpsPing {
+    latitude: f64,
+    longitude: f64,
+    #[serde(default)]
+    accuracy: Option<f64>,
+    #[serde(default)]
+    altitude: Option<f64>,
+    #[serde(default)]
+    speed: Option<f64>,
+    #[serde(default)]
+    heading: Option<f64>,
+    /// Client-side timestamp (ms since epoch) at which the fix was taken.
+    #[serde(default)]
+    timestamp: Option<i64>,
+    /// Optional client identifier so the log is readable when several
+    /// devices are streaming to the same server.
+    #[serde(default)]
+    client_id: Option<String>,
+}
+
+async fn ingest_gps(Json(ping): Json<GpsPing>) -> impl IntoResponse {
+    let client = ping.client_id.as_deref().unwrap_or("device");
+    let acc = ping
+        .accuracy
+        .map(|v| format!("{:.1}m", v))
+        .unwrap_or_else(|| "?".to_string());
+    let alt = ping
+        .altitude
+        .map(|v| format!(" alt={:.1}m", v))
+        .unwrap_or_default();
+    let spd = ping
+        .speed
+        .map(|v| format!(" spd={:.2}m/s", v))
+        .unwrap_or_default();
+    let hdg = ping
+        .heading
+        .map(|v| format!(" hdg={:.0}°", v))
+        .unwrap_or_default();
+    let ts = ping
+        .timestamp
+        .map(|v| format!(" @ {}", v))
+        .unwrap_or_default();
+
+    println!(
+        "[GPS] {} lat={:.6} lon={:.6} acc={}{}{}{}{}",
+        client, ping.latitude, ping.longitude, acc, alt, spd, hdg, ts
+    );
+
+    Json(serde_json::json!({ "ok": true }))
+}
+
 async fn health() -> impl IntoResponse {
     match find_latest_bundle() {
         Some((v, f)) => Json(serde_json::json!({
@@ -136,6 +188,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/check-update", get(check_update))
+        .route("/api/gps", post(ingest_gps))
         .route("/health", get(health))
         .nest_service("/bundles", ServeDir::new(BUNDLES_DIR))
         .layer(cors);

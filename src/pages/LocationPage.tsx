@@ -4,6 +4,7 @@ import Section from '../components/Section';
 import KeyValueRow from '../components/KeyValueRow';
 import Button from '../components/Button';
 import { useLocation } from '../composables/useLocation';
+import { useGpsStreamer } from '../composables/useGpsStreamer';
 
 export default function LocationPage() {
   const {
@@ -11,7 +12,16 @@ export default function LocationPage() {
     checkPermission, requestPermission, getCurrent, startWatch, stopWatch,
   } = useLocation();
 
+  const streamer = useGpsStreamer();
+
   useEffect(() => { checkPermission(); }, [checkPermission]);
+
+  async function onToggleStream() {
+    if (!streamer.enabled && permission !== 'granted') {
+      await requestPermission();
+    }
+    streamer.toggle();
+  }
 
   async function onCheck() { await checkPermission(); }
   async function onRequest() { await requestPermission(); }
@@ -45,6 +55,45 @@ export default function LocationPage() {
         ) : (
           <Button fullWidth variant="danger" onClick={stopWatch}>Stop watching</Button>
         )}
+      </Section>
+
+      <Section title="Background GPS streamer">
+        <p className="mb-2 text-xs text-muted">
+          Sends the current fix to the server every {Math.round(streamer.intervalMs / 1000)}s.
+          Enable it, lock the phone, and watch the server console to see if
+          pings keep arriving with the screen off.
+        </p>
+        <KeyValueRow
+          label="Streaming"
+          value={streamer.enabled ? 'ON' : 'OFF'}
+          success={streamer.enabled}
+        />
+        <KeyValueRow label="Sent" value={String(streamer.sendCount)} />
+        <KeyValueRow label="Failed" value={String(streamer.failCount)} />
+        <KeyValueRow label="Last status" value={streamer.lastStatus} />
+        {streamer.lastSentAt && (
+          <KeyValueRow
+            label="Last sent"
+            value={new Date(streamer.lastSentAt).toLocaleTimeString()}
+          />
+        )}
+        {streamer.lastLat != null && streamer.lastLon != null && (
+          <KeyValueRow
+            label="Last coords"
+            value={`${streamer.lastLat.toFixed(5)}, ${streamer.lastLon.toFixed(5)}`}
+          />
+        )}
+        {streamer.error && (
+          <KeyValueRow label="Send error" value={streamer.error} error />
+        )}
+        <Button
+          fullWidth
+          className="mt-3"
+          variant={streamer.enabled ? 'danger' : 'primary'}
+          onClick={onToggleStream}
+        >
+          {streamer.enabled ? 'Stop streaming to server' : 'Start streaming to server (every 5s)'}
+        </Button>
       </Section>
 
       {position && (

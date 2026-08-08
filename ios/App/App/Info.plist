@@ -66,5 +66,17 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- Background Geolocation (@capacitor-community/background-geolocation) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>fetch</string>
+	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to find nearby tasks and rides.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We keep tracking your location in the background so we can stream your position to the server while the app is closed or the screen is off.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We keep tracking your location in the background so we can stream your position to the server while the app is closed or the screen is off.</string>
 </dict>
 </plist>
