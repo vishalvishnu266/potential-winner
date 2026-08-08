@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -29,7 +29,7 @@ const OTA_HOST = process.env.OTA_HOST || '192.168.0.4'
 const OTA_PORT = Number(process.env.OTA_PORT || 3000)
 
 export default defineConfig({
-    plugins: [vue(), tailwindcss()],
+    plugins: [react(), tailwindcss()],
     // Bind Vite dev server on all interfaces so a phone on the LAN can hit it
     server: {
         host: '0.0.0.0',

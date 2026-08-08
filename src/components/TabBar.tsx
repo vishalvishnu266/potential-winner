@@ -1,29 +1,6 @@
-<template>
-  <nav
-    class="fixed inset-x-0 bottom-0 z-[100] flex items-stretch justify-around border-t border-border bg-surface pb-safe-bottom shadow-[0_-2px_12px_rgba(0,0,0,0.04)]"
-    role="tablist"
-    aria-label="Main navigation"
-  >
-    <button
-      v-for="tab in tabs"
-      :key="tab.name"
-      class="flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 border-none bg-transparent px-1 pb-2.5 pt-2 transition-colors duration-150 [-webkit-tap-highlight-color:transparent]"
-      :class="current === tab.name ? 'text-primary' : 'text-muted'"
-      role="tab"
-      :aria-selected="current === tab.name"
-      :aria-label="tab.label"
-      @click="go(tab)"
-    >
-      <span class="tab-icon inline-flex h-6 w-6" v-html="tab.icon" />
-      <span class="text-[11px] font-semibold tracking-wider">{{ tab.label }}</span>
-    </button>
-  </nav>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { hapticTap } from '../composables/useNative';
+import { getTabForPath } from '../router';
 
 type Tab = { name: string; label: string; path: string; icon: string };
 
@@ -46,24 +23,41 @@ const tabs: Tab[] = [
   },
 ];
 
-const route = useRoute();
-const router = useRouter();
-const current = computed(() => (route.meta?.tab as string) || 'home');
+export default function TabBar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const current = getTabForPath(location.pathname);
 
-function go(tab: Tab) {
-  hapticTap();
-  if (route.path !== tab.path) router.push(tab.path);
-}
-</script>
+  const go = (tab: Tab) => {
+    hapticTap();
+    if (location.pathname !== tab.path) navigate(tab.path);
+  };
 
-<style scoped>
-/*
- * The SVG icons are rendered via v-html, so their inner <svg> element
- * cannot be styled by Tailwind utility classes directly. Force them to
- * fill their parent span (which is w-6 h-6).
- */
-.tab-icon :deep(svg) {
-  width: 100%;
-  height: 100%;
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-[100] flex items-stretch justify-around border-t border-border bg-surface pb-safe-bottom shadow-[0_-2px_12px_rgba(0,0,0,0.04)]"
+      role="tablist"
+      aria-label="Main navigation"
+    >
+      {tabs.map((tab) => (
+        <button
+          key={tab.name}
+          className={
+            'flex min-h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 border-none bg-transparent px-1 pb-2.5 pt-2 transition-colors duration-150 [-webkit-tap-highlight-color:transparent] ' +
+            (current === tab.name ? 'text-primary' : 'text-muted')
+          }
+          role="tab"
+          aria-selected={current === tab.name}
+          aria-label={tab.label}
+          onClick={() => go(tab)}
+        >
+          <span
+            className="inline-flex h-6 w-6 [&_svg]:h-full [&_svg]:w-full"
+            dangerouslySetInnerHTML={{ __html: tab.icon }}
+          />
+          <span className="text-[11px] font-semibold tracking-wider">{tab.label}</span>
+        </button>
+      ))}
+    </nav>
+  );
 }
-</style>

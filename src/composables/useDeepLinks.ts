@@ -1,5 +1,5 @@
 import { App as CapApp, URLOpenListenerEvent } from '@capacitor/app';
-import type { Router } from 'vue-router';
+import type { NavigateFunction } from 'react-router-dom';
 
 /**
  * Deep link handler.
@@ -11,12 +11,12 @@ import type { Router } from 'vue-router';
  *   https://dailygig.app/task/<id>  -> /task/<id>   (App Links / Universal Links)
  *
  * Register once at app bootstrap:
- *     initDeepLinks(router)
+ *     initDeepLinks(navigate)
  *
  * Also handles the "cold start" case where the app was opened *by* a link
- * (before Vue was mounted): reads getLaunchUrl() on init and routes if present.
+ * (before React was mounted): reads getLaunchUrl() on init and routes if present.
  */
-export async function initDeepLinks(router: Router) {
+export async function initDeepLinks(navigate: NavigateFunction) {
     const parse = (raw: string): string | null => {
         try {
             const url = new URL(raw);
@@ -43,14 +43,16 @@ export async function initDeepLinks(router: Router) {
         const path = parse(raw);
         if (!path) return;
         console.log('[deep-link] ->', path);
-        router.push(path).catch(err => {
-            console.warn('[deep-link] router.push failed', err);
-        });
+        try {
+            navigate(path);
+        } catch (err) {
+            console.warn('[deep-link] navigate failed', err);
+        }
     };
 
     // 1) Cold start: app opened *by* the link
     try {
-        const { url } = await CapApp.getLaunchUrl() ?? { url: undefined };
+        const { url } = (await CapApp.getLaunchUrl()) ?? { url: undefined };
         if (url) route(url);
     } catch (e) {
         // Not available on web / older versions

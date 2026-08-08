@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
@@ -6,11 +6,30 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 // Injected at build time via vite.config.js `define`
 declare const __APP_VERSION__: string;
 
-// Shared reactive UI state (module-level so the loading overlay in App.vue
-// and the status text in Settings both react to the same source of truth).
-const isUpdating = ref(false);
-const isApplying = ref(false); // set true from "swap bundle" until reload fires
-const statusMessage = ref('Idle');
+/**
+ * Module-level shared state, mirroring the Vue composable's behavior. We
+ * publish changes to React consumers via a small subscriber list so that
+ * multiple components (UpdateOverlay, SettingsPage) stay in sync from a
+ * single source of truth.
+ */
+type OtaState = {
+    isUpdating: boolean;
+    isApplying: boolean;
+    statusMessage: string;
+};
+
+const state: OtaState = {
+    isUpdating: false,
+    isApplying: false,
+    statusMessage: 'Idle',
+};
+
+const listeners = new Set<() => void>();
+function emit() { listeners.forEach((l) => l()); }
+function setState(patch: Partial<OtaState>) {
+    Object.assign(state, patch);
+    emit();
+}
 
 // Guard against re-applying the same version repeatedly (each poll would
 // otherwise call .set() again if we don't remember what we already applied).
@@ -43,9 +62,9 @@ async function getCurrentVersion(): Promise<string> {
 }
 
 async function doCheck(silent: boolean): Promise<void> {
-    if (isUpdating.value || isApplying.value) return;
-    isUpdating.value = true;
-    if (!silent) statusMessage.value = 'Checking version...';
+    if (state.isUpdating || state.isApplying) return;
+    setState({ isUpdating: true });
+    if (!silent) setState({ statusMessage: 'Checking version...' });
 
     try {
         const currentVersion = await getCurrentVersion();
@@ -56,7 +75,7 @@ async function doCheck(silent: boolean): Promise<void> {
         );
         if (!response.ok) throw new Error('Failed to reach update server');
 
-        const data = await response.json() as {
+        const data = (await response.json()) as {
             update_available: boolean;
             version: string;
             url?: string;
@@ -64,32 +83,31 @@ async function doCheck(silent: boolean): Promise<void> {
 
         // Nothing new
         if (!data.update_available || !data.url) {
-            statusMessage.value = `Up to date (v${currentVersion})`;
+            setState({ statusMessage: `Up to date (v${currentVersion})` });
             return;
         }
 
         // Already applied this version in a previous poll — reload was likely
         // pending. Do NOT re-download or re-set.
         if (lastAppliedVersion === data.version) {
-            statusMessage.value = `Applied v${data.version}, waiting for reload…`;
+            setState({ statusMessage: `Applied v${data.version}, waiting for reload…` });
             return;
         }
 
-        statusMessage.value = `Downloading v${data.version}...`;
+        setState({ statusMessage: `Downloading v${data.version}...` });
         const bundle = await CapacitorUpdater.download({
             url: data.url,
             version: data.version,
         });
 
         // From this moment we must not run another check / apply.
-        isApplying.value = true;
-        statusMessage.value = 'Applying update...';
+        setState({ isApplying: true, statusMessage: 'Applying update...' });
         await CapacitorUpdater.set({ id: bundle.id });
         lastAppliedVersion = data.version;
 
         // Give the WebView one clean reload. On native this replaces the
         // running bundle; on web we fall back to a manual reload.
-        statusMessage.value = 'Reloading app...';
+        setState({ statusMessage: 'Reloading app...' });
         try {
             await CapacitorUpdater.reload();
             // reload() returns — but the WebView is being torn down; anything
@@ -102,55 +120,63 @@ async function doCheck(silent: boolean): Promise<void> {
         }
     } catch (err: any) {
         console.error('[OTA]', err);
-        statusMessage.value = `Error: ${err?.message || 'Update failed'}`;
+        setState({ statusMessage: `Error: ${err?.message || 'Update failed'}` });
     } finally {
         // Note: on a successful reload we never reach here (WebView is gone).
         // On failure we release the lock so the user can retry.
-        isUpdating.value = false;
+        setState({ isUpdating: false });
     }
 }
 
-export function useOta() {
-    async function checkForUpdate(silent = false) {
-        // De-dupe concurrent triggers (poll + resume + manual click)
-        if (inFlight) return inFlight;
-        inFlight = doCheck(silent).finally(() => { inFlight = null; });
-        return inFlight;
-    }
+async function checkForUpdate(silent = false) {
+    // De-dupe concurrent triggers (poll + resume + manual click)
+    if (inFlight) return inFlight;
+    inFlight = doCheck(silent).finally(() => { inFlight = null; });
+    return inFlight;
+}
 
-    function startAutoUpdate(intervalMs = 15000) {
-        stopAutoUpdate();
+function startAutoUpdate(intervalMs = 15000) {
+    stopAutoUpdate();
 
-        // Kick one off immediately (silent)
+    // Kick one off immediately (silent)
+    checkForUpdate(true).catch(() => { /* noop */ });
+
+    pollTimer = setInterval(() => {
+        // Extra guard: skip polling while an apply is in flight so we
+        // never get "old UI showing for a tick between reloads".
+        if (state.isApplying || state.isUpdating) return;
         checkForUpdate(true).catch(() => { /* noop */ });
+    }, intervalMs);
 
-        pollTimer = setInterval(() => {
-            // Extra guard: skip polling while an apply is in flight so we
-            // never get "old UI showing for a tick between reloads".
-            if (isApplying.value || isUpdating.value) return;
-            checkForUpdate(true).catch(() => { /* noop */ });
-        }, intervalMs);
+    // Re-check when the app returns to the foreground
+    try {
+        CapApp.addListener('appStateChange', (s: { isActive: boolean }) => {
+            if (s.isActive) checkForUpdate(true).catch(() => { /* noop */ });
+        }).then((h) => { appStateListener = h; });
+    } catch { /* not native */ }
+}
 
-        // Re-check when the app returns to the foreground
-        try {
-            CapApp.addListener('appStateChange', (state: { isActive: boolean }) => {
-                if (state.isActive) checkForUpdate(true).catch(() => { /* noop */ });
-            }).then((h) => { appStateListener = h; });
-        } catch { /* not native */ }
-    }
+function stopAutoUpdate() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (appStateListener?.remove) { appStateListener.remove(); appStateListener = null; }
+}
 
-    function stopAutoUpdate() {
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-        if (appStateListener?.remove) { appStateListener.remove(); appStateListener = null; }
-    }
+export function useOta() {
+    // Force re-render whenever module-level state changes.
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const l = () => setTick((t) => t + 1);
+        listeners.add(l);
+        return () => { listeners.delete(l); };
+    }, []);
 
     return {
         checkForUpdate,
         startAutoUpdate,
         stopAutoUpdate,
-        statusMessage,
-        isUpdating,
-        isApplying,
+        statusMessage: state.statusMessage,
+        isUpdating: state.isUpdating,
+        isApplying: state.isApplying,
         platform: Capacitor.getPlatform(),
     };
 }

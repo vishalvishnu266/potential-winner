@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { useCallback, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import {
     CapacitorSQLite,
@@ -32,7 +32,6 @@ async function ensureWebStore() {
 
     // Lazy-register the jeep-sqlite custom element and initialize the store
     // exactly once. Safe to call repeatedly.
-    // @ts-expect-error - jeep-sqlite has no bundled types
     const { defineCustomElements } = await import('jeep-sqlite/loader');
     defineCustomElements(window);
 
@@ -86,40 +85,40 @@ async function openDb(name = DB_NAME_DEFAULT): Promise<SQLiteDBConnection> {
 }
 
 export function useSqlite(name = DB_NAME_DEFAULT) {
-    const ready = ref(false);
-    const error = ref<string | null>(null);
+    const [ready, setReady] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const isWeb = Capacitor.getPlatform() === 'web';
 
-    async function db(): Promise<SQLiteDBConnection> {
+    const db = useCallback(async (): Promise<SQLiteDBConnection> => {
         try {
             const c = await openDb(name);
-            ready.value = true;
+            setReady(true);
             return c;
         } catch (e: any) {
-            error.value = e?.message || 'Failed to open database';
+            setError(e?.message || 'Failed to open database');
             throw e;
         }
-    }
+    }, [name]);
 
     /** Execute a write statement (INSERT/UPDATE/DELETE/CREATE). Returns changes count. */
-    async function run(sql: string, params: any[] = []): Promise<number> {
+    const run = useCallback(async (sql: string, params: any[] = []): Promise<number> => {
         const c = await db();
         const res = await c.run(sql, params);
         if (isWeb && sqlite) { try { await sqlite.saveToStore(name); } catch { /* noop */ } }
         return res.changes?.changes ?? 0;
-    }
+    }, [db, isWeb, name]);
 
     /** Execute a read statement (SELECT). Returns an array of row objects. */
-    async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    const query = useCallback(async <T = any>(sql: string, params: any[] = []): Promise<T[]> => {
         const c = await db();
         const res = await c.query(sql, params);
         return (res.values ?? []) as T[];
-    }
+    }, [db]);
 
     /** Wipe the notes table — used by the Sandbox "Clear all" button. */
-    async function reset() {
+    const reset = useCallback(async () => {
         await run('DELETE FROM notes;');
-    }
+    }, [run]);
 
     return { ready, error, run, query, reset, isWeb };
 }

@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { useCallback, useState } from 'react';
 
 /**
  * Wraps @capacitor/camera. On the web the plugin uses a file input +
@@ -11,39 +11,41 @@ import { ref } from 'vue';
  * Both prompt the OS permission dialog on first use.
  */
 export function useCamera() {
-    const dataUrl = ref<string | null>(null);
-    const error = ref<string | null>(null);
-    const busy = ref(false);
-    const permission = ref<string>('unknown');
+    const [dataUrl, setDataUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+    const [permission, setPermission] = useState<string>('unknown');
 
-    async function checkPermission() {
+    const checkPermission = useCallback(async () => {
         try {
             const { Camera } = await import('@capacitor/camera');
             const p = await Camera.checkPermissions();
             // On web this may be undefined
-            permission.value = p?.camera ?? 'unknown';
-            return permission.value;
+            const val = p?.camera ?? 'unknown';
+            setPermission(val);
+            return val;
         } catch (e: any) {
-            error.value = e?.message || 'Permission check failed';
+            setError(e?.message || 'Permission check failed');
             return 'unknown';
         }
-    }
+    }, []);
 
-    async function requestPermission() {
+    const requestPermission = useCallback(async () => {
         try {
             const { Camera } = await import('@capacitor/camera');
             const p = await Camera.requestPermissions({ permissions: ['camera'] });
-            permission.value = p?.camera ?? 'unknown';
-            return permission.value;
+            const val = p?.camera ?? 'unknown';
+            setPermission(val);
+            return val;
         } catch (e: any) {
-            error.value = e?.message || 'Permission request failed';
+            setError(e?.message || 'Permission request failed');
             return 'denied';
         }
-    }
+    }, []);
 
-    async function takePhoto() {
-        busy.value = true;
-        error.value = null;
+    const takePhoto = useCallback(async () => {
+        setBusy(true);
+        setError(null);
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
             const photo = await Camera.getPhoto({
@@ -53,24 +55,24 @@ export function useCamera() {
                 source: CameraSource.Camera,
                 saveToGallery: false,
             });
-            dataUrl.value = photo.dataUrl ?? null;
+            setDataUrl(photo.dataUrl ?? null);
             return photo;
         } catch (e: any) {
             // User cancel is not really an error
             if (e?.message?.toLowerCase?.().includes('cancel')) {
-                error.value = null;
+                setError(null);
             } else {
-                error.value = e?.message || 'Camera failed';
+                setError(e?.message || 'Camera failed');
             }
             return null;
         } finally {
-            busy.value = false;
+            setBusy(false);
         }
-    }
+    }, []);
 
-    async function pickPhoto() {
-        busy.value = true;
-        error.value = null;
+    const pickPhoto = useCallback(async () => {
+        setBusy(true);
+        setError(null);
         try {
             const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
             const photo = await Camera.getPhoto({
@@ -79,24 +81,24 @@ export function useCamera() {
                 resultType: CameraResultType.DataUrl,
                 source: CameraSource.Photos,
             });
-            dataUrl.value = photo.dataUrl ?? null;
+            setDataUrl(photo.dataUrl ?? null);
             return photo;
         } catch (e: any) {
             if (e?.message?.toLowerCase?.().includes('cancel')) {
-                error.value = null;
+                setError(null);
             } else {
-                error.value = e?.message || 'Photo picker failed';
+                setError(e?.message || 'Photo picker failed');
             }
             return null;
         } finally {
-            busy.value = false;
+            setBusy(false);
         }
-    }
+    }, []);
 
-    function clear() {
-        dataUrl.value = null;
-        error.value = null;
-    }
+    const clear = useCallback(() => {
+        setDataUrl(null);
+        setError(null);
+    }, []);
 
     return {
         dataUrl, error, busy, permission,
