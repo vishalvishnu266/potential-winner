@@ -9,12 +9,39 @@ import Input from '../components/Input';
 import Card from '../components/Card';
 import { useCamera } from '../composables/useCamera';
 import { useSqlite } from '../composables/useSqlite';
+import { useLocalNotifications } from '../composables/useLocalNotifications';
 
 declare const __APP_VERSION__: string;
 
 interface NoteRow { id: number; body: string; created_at: number }
 
 const btnRow = 'mt-2.5 flex gap-2';
+
+function NotificationsPanel() {
+  const { permission, lastId, error, check, request, notify } = useLocalNotifications();
+
+  return (
+    <>
+      <KeyValueRow label="Permission" value={permission} />
+      {lastId != null && <KeyValueRow label="Last notif ID" value={String(lastId)} />}
+      {error && <KeyValueRow label="Error" value={error} error />}
+
+      <div className={btnRow}>
+        <Button className="flex-1" onClick={check}>Check</Button>
+        <Button className="flex-1" variant="primary" onClick={request}>Request</Button>
+      </div>
+      <div className={btnRow}>
+        <Button className="flex-1" variant="primary" onClick={() => notify()}>
+          Fire now
+        </Button>
+        <Button className="flex-1" onClick={() => notify({ title: 'Reminder', body: 'This fires in 10 seconds — lock the phone!', delaySeconds: 10 })}>
+          Fire in 10s
+        </Button>
+      </div>
+    </>
+  );
+}
+
 
 export default function SandboxPage() {
   const navigate = useNavigate();
@@ -189,6 +216,10 @@ export default function SandboxPage() {
         ) : (
           <p className="mt-2.5 text-xs text-muted">No notes yet — data persists across app restarts.</p>
         )}
+      </Section>
+
+      <Section title="Notifications 🔔">
+        <NotificationsPanel />
       </Section>
 
       <Section title="Deep links 🔗">

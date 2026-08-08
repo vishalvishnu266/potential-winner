@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
+import { fireSystemNotification } from './useLocalNotifications';
 
 // Injected at build time via vite.config.js `define`
 declare const __APP_VERSION__: string;
@@ -44,6 +45,22 @@ let appStateListener: any = null;
 // Tell native we booted successfully — must be called once per JS boot to
 // prevent the plugin from rolling back to the previous bundle.
 try { CapacitorUpdater.notifyAppReady(); } catch { /* web */ }
+
+// If the previous JS bundle scheduled a "just-applied" notification just
+// before reloading, and the new bundle boots quickly enough, sessionStorage
+// lets us know we're inside a *fresh* post-update boot. Show a subtle in-app
+// confirmation and clean up.
+try {
+    const pending = sessionStorage.getItem('ota:justApplied');
+    if (pending) {
+        sessionStorage.removeItem('ota:justApplied');
+        // Also fire a system notification (best-effort — no-op if perms denied).
+        fireSystemNotification({
+            title: 'App updated',
+            body: `TaskFinder is now running v${pending}.`,
+        }).catch(() => { /* ignore */ });
+    }
+} catch { /* SSR / private-mode */ }
 
 function getApiUrl() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -104,6 +121,19 @@ async function doCheck(silent: boolean): Promise<void> {
         setState({ isApplying: true, statusMessage: 'Applying update...' });
         await CapacitorUpdater.set({ id: bundle.id });
         lastAppliedVersion = data.version;
+
+        // Fire a system notification confirming the update was applied.
+        // We do this in two ways so at least one wins:
+        //   1. Schedule a delayed OS notification (survives the reload).
+        //   2. Mark sessionStorage so the freshly-booted bundle can fire
+        //      an *immediate* notification on next boot.
+        try { sessionStorage.setItem('ota:justApplied', data.version); } catch { /* noop */ }
+        fireSystemNotification({
+            title: 'Update applied',
+            body: `TaskFinder updated to v${data.version}. Restarting…`,
+            delaySeconds: 2,
+            extra: { kind: 'ota', version: data.version },
+        }).catch(() => { /* best-effort */ });
 
         // Give the WebView one clean reload. On native this replaces the
         // running bundle; on web we fall back to a manual reload.
