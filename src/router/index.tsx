@@ -5,12 +5,14 @@ const SandboxPage = lazy(() => import('../pages/SandboxPage'));
 const LocationPage = lazy(() => import('../pages/LocationPage'));
 const DevicePage = lazy(() => import('../pages/DevicePage'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
+const MapPage = lazy(() => import('../pages/MapPage'));
 const TaskDetailPage = lazy(() => import('../pages/TaskDetailPage'));
 const RideDetailPage = lazy(() => import('../pages/RideDetailPage'));
 
 // Route metadata (used by TabBar to know which tab is active for a given path).
 export const routeMeta: Record<string, { title: string; tab: string }> = {
   '/sandbox': { title: 'Sandbox', tab: 'sandbox' },
+  '/map': { title: 'Map', tab: 'map' },
   '/location': { title: 'Location', tab: 'location' },
   '/device': { title: 'Device', tab: 'device' },
   '/settings': { title: 'Settings', tab: 'settings' },
@@ -20,6 +22,7 @@ export const routeMeta: Record<string, { title: string; tab: string }> = {
 
 export function getTabForPath(pathname: string): string {
   if (pathname.startsWith('/sandbox')) return 'sandbox';
+  if (pathname.startsWith('/map')) return 'map';
   if (pathname.startsWith('/location')) return 'location';
   if (pathname.startsWith('/device')) return 'device';
   if (pathname.startsWith('/settings')) return 'settings';
@@ -34,6 +37,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<Navigate to="/sandbox" replace />} />
         <Route path="/sandbox" element={<SandboxPage />} />
+        <Route path="/map" element={<MapPage />} />
         <Route path="/location" element={<LocationPage />} />
         <Route path="/device" element={<DevicePage />} />
         <Route path="/settings" element={<SettingsPage />} />
