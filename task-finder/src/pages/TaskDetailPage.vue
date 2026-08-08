@@ -30,6 +30,8 @@ const ref = computed(() => (route.query.ref as string) || '');
 </script>
 
 <style scoped>
+@reference "../style.css";
+
 .kv {
   @apply flex justify-between gap-3 border-b border-border py-2 text-[13px];
 }

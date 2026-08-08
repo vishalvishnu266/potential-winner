@@ -65,6 +65,8 @@ async function handleCheckUpdate() {
 </script>
 
 <style scoped>
+@reference "../style.css";
+
 /*
  * The .row / .chev / .sub / .value pattern is used a lot in this file
  * and includes a first-of-type border reset that Tailwind's arbitrary
