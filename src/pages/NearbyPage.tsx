@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import Section from '../components/Section';
 import Button from '../components/Button';
@@ -250,9 +250,81 @@ function RadarView({
     const rot = heading ?? 0;
     const active = heading != null;
 
+    // ---------------------------------------------------------------------
+    // Zoom
+    // ---------------------------------------------------------------------
+    // `zoom` is a multiplier over the filter radius. zoom=1 → the outer
+    // ring equals `radiusKm` (default, feels like "fit the whole radius").
+    // zoom=4 → the outer ring shows only radiusKm/4 (4× closer view).
+    // Jobs beyond the visible radius get clamped to the edge and rendered
+    // as a small "→" hint pointing outward instead of stacking on the rim.
+    const MIN_ZOOM = 1;
+    const MAX_ZOOM = 8;
+    const [zoom, setZoom] = useState(1);
+
+    // Reset zoom when the user picks a different filter radius so they
+    // don't stay accidentally zoomed in on a now-smaller area.
+    useEffect(() => { setZoom(1); }, [radiusKm]);
+
+    const visibleRadiusKm = radiusKm / zoom;
+
+    // Auto-fit: pick a zoom that puts the farthest job at ~90 % of the
+    // outer ring. If there are no jobs (or only one very close job), fall
+    // back to zoom = 1.
+    function autoFit() {
+        if (jobs.length === 0) { setZoom(1); return; }
+        const maxD = Math.max(...jobs.map((j) => j.distance));
+        if (maxD <= 0.01) { setZoom(MAX_ZOOM); return; }
+        const target = radiusKm / (maxD / 0.9);
+        setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, target)));
+    }
+
+    function bump(delta: number) {
+        setZoom((z) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z * (delta > 0 ? 1.4 : 1 / 1.4))));
+    }
+
+    // Pinch-to-zoom: track distance between two active touches.
+    const pinchStartRef = useRef<{ dist: number; zoom: number } | null>(null);
+    function onTouchStart(e: React.TouchEvent) {
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            pinchStartRef.current = { dist: Math.hypot(dx, dy), zoom };
+        }
+    }
+    function onTouchMove(e: React.TouchEvent) {
+        if (e.touches.length === 2 && pinchStartRef.current) {
+            e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const d = Math.hypot(dx, dy);
+            const factor = d / pinchStartRef.current.dist;
+            const next = pinchStartRef.current.zoom * factor;
+            setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next)));
+        }
+    }
+    function onTouchEnd() { pinchStartRef.current = null; }
+
+    // Desktop mouse-wheel zoom is a nice bonus for `npm run dev`.
+    function onWheel(e: React.WheelEvent) {
+        e.preventDefault();
+        setZoom((z) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z * (e.deltaY < 0 ? 1.1 : 1 / 1.1))));
+    }
+
+    const visibleJobs = jobs.length;
+    const jobsInsideView = jobs.filter((j) => j.distance <= visibleRadiusKm).length;
+    const jobsOutsideView = visibleJobs - jobsInsideView;
+
     return (
         <div className="mx-5 mt-3 rounded-2xl border border-border bg-surface p-4">
-            <div className="relative mx-auto" style={{ width: size, height: size }}>
+            <div
+                className="relative mx-auto touch-none select-none"
+                style={{ width: size, height: size }}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+                onWheel={onWheel}
+            >
                 <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full">
                     {/* Rotating layer — jobs + cardinal labels + rings */}
                     <g style={{
@@ -282,26 +354,31 @@ function RadarView({
 
                         {/* jobs */}
                         {jobs.map((j) => {
-                            const rNorm = Math.min(1, j.distance / radiusKm);
+                            const inside = j.distance <= visibleRadiusKm;
+                            const rNorm = inside ? j.distance / visibleRadiusKm : 1;
                             const rad = (j.bearing - 90) * (Math.PI / 180); // 0° = north = up
                             const x = c + Math.cos(rad) * c * rNorm * 0.95;
                             const y = c + Math.sin(rad) * c * rNorm * 0.95;
                             const meta = CATEGORY_META[j.category];
+                            const r = inside ? 9 : 6;
                             return (
                                 <g key={j.id} className="cursor-pointer" onClick={() => onSelect(j)}>
                                     <circle
-                                        cx={x} cy={y} r={9}
+                                        cx={x} cy={y} r={r}
                                         fill={meta.tone.includes('blue') ? '#dbeafe' : meta.tone.includes('amber') ? '#fef3c7' : '#d1fae5'}
                                         stroke={meta.tone.includes('blue') ? '#2563eb' : meta.tone.includes('amber') ? '#d97706' : '#059669'}
+                                        strokeDasharray={inside ? '' : '2 2'}
                                     />
                                     {/* Counter-rotate emoji so it stays upright even while the plot spins. */}
                                     <g style={{
                                         transform: active ? `rotate(${rot}deg)` : undefined,
                                         transformOrigin: `${x}px ${y}px`,
                                     }}>
-                                        <text x={x} y={y + 3.5} textAnchor="middle" fontSize="10">
-                                            {meta.emoji}
-                                        </text>
+                                        {inside && (
+                                            <text x={x} y={y + 3.5} textAnchor="middle" fontSize="10">
+                                                {meta.emoji}
+                                            </text>
+                                        )}
                                     </g>
                                 </g>
                             );
@@ -325,12 +402,49 @@ function RadarView({
 
             <div className="mt-2 flex justify-around text-[11px] text-muted">
                 {rings.map((r) => (
-                    <span key={r}>{(radiusKm * r).toFixed(1)} km</span>
+                    <span key={r}>{fmtDist(visibleRadiusKm * r)}</span>
                 ))}
             </div>
 
-            <div className="mt-2 flex items-center justify-between text-[11px] text-muted">
-                <span>Tap any dot for actions · {jobs.length} in {radiusKm} km</span>
+            {/* Zoom controls */}
+            <div className="mt-3 flex items-center gap-2">
+                <button
+                    onClick={() => bump(-1)}
+                    disabled={zoom <= MIN_ZOOM + 0.001}
+                    className="h-8 w-8 shrink-0 cursor-pointer rounded-full border border-border bg-surface text-lg font-bold text-text disabled:opacity-40"
+                    aria-label="Zoom out"
+                >−</button>
+                <input
+                    type="range"
+                    min={MIN_ZOOM}
+                    max={MAX_ZOOM}
+                    step={0.1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className="flex-1 accent-primary"
+                    aria-label="Zoom"
+                />
+                <button
+                    onClick={() => bump(+1)}
+                    disabled={zoom >= MAX_ZOOM - 0.001}
+                    className="h-8 w-8 shrink-0 cursor-pointer rounded-full border border-border bg-surface text-lg font-bold text-text disabled:opacity-40"
+                    aria-label="Zoom in"
+                >+</button>
+                <button
+                    onClick={autoFit}
+                    className="h-8 shrink-0 cursor-pointer rounded-full border border-border bg-surface px-3 text-[11px] font-semibold text-text"
+                    aria-label="Auto fit"
+                >Fit</button>
+            </div>
+
+            <div className="mt-1 flex items-center justify-between text-[11px] text-muted">
+                <span>
+                    {jobsInsideView} in view
+                    {jobsOutsideView > 0 && (
+                        <span className="text-amber-600"> · {jobsOutsideView} beyond</span>
+                    )}
+                    {' · '}zoom {zoom.toFixed(1)}× ({fmtDist(visibleRadiusKm)} view)
+                </span>
                 {active ? (
                     <span className="font-semibold text-primary">
                         🧭 {Math.round(rot)}° {compassLabel(rot)}
@@ -420,4 +534,9 @@ function ActionSheet({ job, onClose }: { job: Job; onClose: () => void }) {
 function compassLabel(deg: number) {
     const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
     return dirs[Math.round(deg / 45) % 8];
+}
+
+function fmtDist(km: number) {
+    if (km >= 1) return `${km.toFixed(km < 10 ? 2 : 1)} km`;
+    return `${Math.round(km * 1000)} m`;
 }
