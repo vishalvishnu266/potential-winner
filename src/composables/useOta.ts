@@ -80,6 +80,13 @@ async function getCurrentVersion(): Promise<string> {
 
 async function doCheck(silent: boolean): Promise<void> {
     if (state.isUpdating || state.isApplying) return;
+    // On the web (npm run dev) the @capgo/capacitor-updater plugin has no
+    // native side, so download()/set()/reload() all throw. Skip the whole
+    // dance so we never get stuck on the "Reloading app..." overlay.
+    if (Capacitor.getPlatform() === 'web') {
+        setState({ statusMessage: 'OTA disabled (web preview)' });
+        return;
+    }
     setState({ isUpdating: true });
     if (!silent) setState({ statusMessage: 'Checking version...' });
 
@@ -151,6 +158,9 @@ async function doCheck(silent: boolean): Promise<void> {
     } catch (err: any) {
         console.error('[OTA]', err);
         setState({ statusMessage: `Error: ${err?.message || 'Update failed'}` });
+        // Clear the overlay if we errored during apply — otherwise the
+        // "Reloading app…" spinner is stuck forever.
+        setState({ isApplying: false });
     } finally {
         // Note: on a successful reload we never reach here (WebView is gone).
         // On failure we release the lock so the user can retry.
