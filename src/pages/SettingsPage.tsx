@@ -23,7 +23,11 @@ export default function SettingsPage() {
   const nav = useNavigate();
   const { locale, t, setLocale } = useI18n();
   const { theme, setTheme, resolved } = useTheme();
-  const { checkForUpdate, isUpdating, statusMessage } = useOta();
+  // We use `isCheckingManually` (only set when the user taps this row)
+  // instead of the old `isUpdating` — which used to briefly go true on
+  // every 5-minute silent poll and made the row flash "Checking…" for
+  // no reason.  See useOta.ts for the state-split rationale.
+  const { checkForUpdate, isCheckingManually, statusMessage } = useOta();
 
   const isDark = resolved === 'dark';
 
@@ -121,9 +125,9 @@ export default function SettingsPage() {
       <section className="mx-4 mt-4 card divide-y divide-[var(--color-hairline)]">
         <Row
           Icon={RefreshCw}
-          title={isUpdating ? 'Checking…' : 'Check for updates'}
+          title={isCheckingManually ? 'Checking…' : 'Check for updates'}
           subtitle={statusMessage}
-          disabled={isUpdating}
+          disabled={isCheckingManually}
           onClick={() => { hapticTap(); checkForUpdate(false); }}
         />
         <Row

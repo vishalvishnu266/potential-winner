@@ -13,16 +13,35 @@ declare const __APP_VERSION__: string;
  * multiple components (UpdateOverlay, SettingsPage) stay in sync from a
  * single source of truth.
  */
+/**
+ * OTA state split into three distinct signals so consumers can pick the
+ * one they actually need without spurious spinner flashes:
+ *
+ *  - `isDownloading` — true while `CapacitorUpdater.download()` is running.
+ *  - `isApplying`    — true while we are calling .set()/reload() on the
+ *                      new bundle.  This is the phase where we DO want
+ *                      to freeze the UI with the overlay.
+ *  - `isCheckingManually` — true only for a check that the user
+ *                      explicitly triggered (tapping the Settings row).
+ *                      Silent background polls never flip this.
+ *
+ * The old `isUpdating` field is preserved as the OR of the first two
+ * for backwards compatibility with `UpdateOverlay`.
+ */
 type OtaState = {
-    isUpdating: boolean;
+    isDownloading: boolean;
     isApplying: boolean;
+    isCheckingManually: boolean;
     statusMessage: string;
+    lastCheckAt: number | null;   // ms epoch; null = never
 };
 
 const state: OtaState = {
-    isUpdating: false,
+    isDownloading: false,
     isApplying: false,
+    isCheckingManually: false,
     statusMessage: 'Idle',
+    lastCheckAt: null,
 };
 
 const listeners = new Set<() => void>();
@@ -99,21 +118,27 @@ async function getCurrentVersion(): Promise<string> {
 }
 
 async function doCheck(silent: boolean): Promise<void> {
-    if (state.isUpdating || state.isApplying) return;
+    // Don't stack checks / apply cycles.
+    if (state.isDownloading || state.isApplying) return;
+
     // On the web (npm run dev) the @capgo/capacitor-updater plugin has no
     // native side, so download()/set()/reload() all throw. Skip the whole
     // dance so we never get stuck on the "Reloading app..." overlay.
     if (Capacitor.getPlatform() === 'web') {
         // Only set the status once — subsequent polls used to re-set the
-        // same string every tick, which still forced a re-render because
-        // of the naive setState. That's now guarded, but skipping the
-        // call entirely is cheaper and clearer.
+        // same string every tick, which still forced a re-render.
         if (state.statusMessage !== 'OTA disabled (web preview)') {
             setState({ statusMessage: 'OTA disabled (web preview)' });
         }
         return;
     }
-    setState({ isUpdating: true });
+
+    // For an *explicit* check we surface a "Checking…" spinner.  For
+    // silent background polls we do NOT — they'd otherwise cause the
+    // Settings row and any other spinner-bound UI to flash every 5 min.
+    if (!silent) {
+        setState({ isCheckingManually: true });
+    }
     if (!silent) setState({ statusMessage: 'Checking version...' });
 
     try {
@@ -140,9 +165,12 @@ async function doCheck(silent: boolean): Promise<void> {
             current: currentVersion, ...data,
         });
 
-        // Nothing new
+        // Nothing new — for silent polls, don't spam the status
+        // message either.  Only user-initiated checks flip the text.
         if (!data.available || !data.url || !data.version) {
-            setState({ statusMessage: `Up to date (v${currentVersion})` });
+            if (!silent) {
+                setState({ statusMessage: `Up to date (v${currentVersion})` });
+            }
             return;
         }
 
@@ -155,6 +183,11 @@ async function doCheck(silent: boolean): Promise<void> {
             return;
         }
         attemptedVersions.add(data.version);
+
+        // An update IS available and we haven't tried it yet.  From
+        // here we DO show progress — flip the download flag so the
+        // overlay (isDownloading || isApplying) engages.
+        setState({ isDownloading: true, statusMessage: `Downloading v${data.version}…` });
 
         // Already applied this version in a previous poll — reload was likely
         // pending. Do NOT re-download or re-set.
@@ -202,14 +235,24 @@ async function doCheck(silent: boolean): Promise<void> {
         }
     } catch (err: any) {
         console.error('[OTA]', err);
-        setState({ statusMessage: `Error: ${err?.message || 'Update failed'}` });
+        // Only surface the error text if this was a user-initiated
+        // check or if we already flipped the overlay — otherwise
+        // network blips during silent polls would flash a scary error
+        // even though nothing is happening.
+        if (!silent || state.isDownloading || state.isApplying) {
+            setState({ statusMessage: `Error: ${err?.message || 'Update failed'}` });
+        }
         // Clear the overlay if we errored during apply — otherwise the
         // "Reloading app…" spinner is stuck forever.
-        setState({ isApplying: false });
+        setState({ isApplying: false, isDownloading: false });
     } finally {
         // Note: on a successful reload we never reach here (WebView is gone).
-        // On failure we release the lock so the user can retry.
-        setState({ isUpdating: false });
+        // On failure we release the locks so the user can retry.
+        setState({
+            isDownloading: false,
+            isCheckingManually: false,
+            lastCheckAt: Date.now(),
+        });
     }
 }
 
@@ -247,7 +290,7 @@ function startAutoUpdate(intervalMs = 5 * 60 * 1000) {
     pollTimer = setInterval(() => {
         // Extra guard: skip polling while an apply is in flight so we
         // never get "old UI showing for a tick between reloads".
-        if (state.isApplying || state.isUpdating) return;
+        if (state.isApplying || state.isDownloading) return;
         checkForUpdate(true).catch(() => { /* noop */ });
     }, intervalMs);
 
@@ -273,13 +316,20 @@ export function useOta() {
         return () => { listeners.delete(l); };
     }, []);
 
+    // Back-compat: `isUpdating` is now the OR of "actively downloading"
+    // and "actively applying".  Silent polls no longer set it.
+    const isUpdating = state.isDownloading || state.isApplying;
+
     return {
         checkForUpdate,
         startAutoUpdate,
         stopAutoUpdate,
         statusMessage: state.statusMessage,
-        isUpdating: state.isUpdating,
+        isUpdating,                                      // legacy alias
+        isDownloading: state.isDownloading,
         isApplying: state.isApplying,
+        isCheckingManually: state.isCheckingManually,
+        lastCheckAt: state.lastCheckAt,
         platform: Capacitor.getPlatform(),
     };
 }
