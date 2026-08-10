@@ -60,8 +60,16 @@ if (archiver) {
     }
 }
 
-// Write a small manifest so the server always knows the freshest version
-const manifest = { latest: version, file: `v${version}.zip`, created_at: now.toISOString() };
+// Write a small manifest so the server always knows the freshest version.
+// IMPORTANT: The Rust server (`server/src/main.rs::LatestManifest`) reads
+// keys `version` + `file`.  Previously this script wrote `latest` — a
+// mismatch that made the server silently return "no update available"
+// even when a fresh bundle existed.  Keep these fields in sync.
+const manifest = {
+    version,                          // <— was "latest"; server expects "version"
+    file: `v${version}.zip`,
+    created_at: now.toISOString(),
+};
 const manifestPath = join(bundlesDir, 'latest.json');
 const fs = await import('node:fs/promises');
 await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));

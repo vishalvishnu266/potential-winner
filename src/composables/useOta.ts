@@ -99,14 +99,23 @@ async function doCheck(silent: boolean): Promise<void> {
         );
         if (!response.ok) throw new Error('Failed to reach update server');
 
+        // NOTE: The server returns `{ available, version, url }`
+        // (see server/src/main.rs → UpdateResponse). Previously this
+        // code read `update_available`, which was always undefined →
+        // no update was ever considered "available" and the flow
+        // silently ended at "Up to date". Keep field names in sync
+        // with the server contract.
         const data = (await response.json()) as {
-            update_available: boolean;
-            version: string;
-            url?: string;
+            available: boolean;
+            version: string | null;
+            url: string | null;
         };
+        console.log('[OTA] server responded', {
+            current: currentVersion, ...data,
+        });
 
         // Nothing new
-        if (!data.update_available || !data.url) {
+        if (!data.available || !data.url || !data.version) {
             setState({ statusMessage: `Up to date (v${currentVersion})` });
             return;
         }
