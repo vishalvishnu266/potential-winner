@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>DailyGig — Dev Seed</title>
+  <style>
+    /* ---------------------------------------------------------------
+     * Standalone dev tool.  Zero deps, no build, no framework.
+     * Fires the same PUBLIC endpoints the mobile app already uses
+     * (POST /api/jobs, POST /api/heartbeat) so the *server has no
+     * test-only code* — the seed logic lives entirely in this file.
+     * ------------------------------------------------------------- */
+    :root {
+      --bg: #0a0a0a; --surface: #16161a; --surface-2: #1e1e24;
+      --border: #26262c; --text: #f5f5f7; --muted: #a1a1aa;
+      --primary: #4ea94a; --primary-fg: #0a0a0a;
+      --warn: #f59e0b; --bad: #dc2626;
+      --card-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f7f8; --surface: #ffffff; --surface-2: #f4f4f5;
+        --border: #e5e5e7; --text: #111114; --muted: #6b7280;
+        --primary: #138808; --primary-fg: #ffffff;
+        --card-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                 font-size: 15px; line-height: 1.5; }
+    body { padding: 24px 16px 64px; max-width: 640px; margin: 0 auto; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    h1 { margin: 0; font-size: 22px; }
+    p.lead { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+    .card { background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 16px; box-shadow: var(--card-shadow);
+            margin-bottom: 12px; }
+    label { display: block; font-size: 12px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: var(--muted); margin-bottom: 6px; }
+    input, select { width: 100%; padding: 10px 12px; border-radius: 10px;
+                    border: 1px solid var(--border); background: var(--surface-2);
+                    color: var(--text); font-size: 15px; }
+    input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    button { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+             width: 100%; padding: 12px 16px; border: 0; border-radius: 12px;
+             background: var(--primary); color: var(--primary-fg);
+             font-size: 15px; font-weight: 700; cursor: pointer; }
+    button.secondary { background: var(--surface-2); color: var(--text);
+                       border: 1px solid var(--border); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .split { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .status { font-size: 13px; margin-top: 8px; color: var(--muted); word-wrap: break-word; }
+    .status.ok  { color: var(--primary); }
+    .status.err { color: var(--bad); }
+    .progress { height: 6px; background: var(--surface-2); border-radius: 3px;
+                overflow: hidden; margin-top: 10px; }
+    .progress > div { height: 100%; background: var(--primary); width: 0; transition: width .1s linear; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+           font-size: 12px; background: var(--surface-2); border: 1px solid var(--border);
+           padding: 1px 6px; border-radius: 4px; }
+    footer { margin-top: 24px; text-align: center; font-size: 12px; color: var(--muted); }
+    .logo { width: 32px; height: 32px; display: inline-flex; align-items: center;
+            justify-content: center; background: var(--primary); color: var(--primary-fg);
+            border-radius: 9px; font-weight: 800; }
+    .checkbox { display: flex; align-items: center; gap: 8px; margin-top: 8px;
+                font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">DG</span>
+    <div>
+      <h1>Dev seeder</h1>
+      <div style="font-size:12px;color:var(--muted)">DailyGig test data helper</div>
+    </div>
+  </header>
+  <p class="lead">
+    Populates any running DailyGig server with mock jobs and workers around a
+    coordinate.  Uses only the <b>public</b> endpoints
+    (<span class="kbd">POST /api/jobs</span>, <span class="kbd">POST /api/heartbeat</span>) so the
+    server has no test-only code.
+  </p>
+
+  <!-- Server target -->
+  <section class="card">
+    <label>Server</label>
+    <div class="split">
+      <input id="base" placeholder="http://192.168.0.4:3000" />
+      <button class="secondary" id="btnHealth" style="width:auto;padding:10px 14px">Ping</button>
+    </div>
+    <div class="status" id="healthStatus"></div>
+  </section>
+
+  <!-- Location -->
+  <section class="card">
+    <label>Centre coordinate</label>
+    <div class="row">
+      <input id="lat" placeholder="Latitude"  inputmode="decimal" />
+      <input id="lon" placeholder="Longitude" inputmode="decimal" />
+    </div>
+    <div style="height:8px"></div>
+    <button class="secondary" id="btnGeo">📍 Use my browser location</button>
+    <div class="status" id="geoStatus"></div>
+  </section>
+
+  <!-- Amounts -->
+  <section class="card">
+    <label>Amounts</label>
+    <div class="row-3">
+      <div>
+        <label>Radius (km)</label>
+        <input id="radius" type="number" value="5" min="0.5" step="0.5" />
+      </div>
+      <div>
+        <label>Jobs</label>
+        <input id="jobs" type="number" value="20" min="0" />
+      </div>
+      <div>
+        <label>Workers</label>
+        <input id="workers" type="number" value="12" min="0" />
+      </div>
+    </div>
+    <div class="checkbox">
+      <input type="checkbox" id="keepAlive" style="width:auto"/>
+      <label for="keepAlive" style="margin:0;text-transform:none;letter-spacing:0;font-weight:400">
+        Re-fire worker heartbeats every 60 s (keeps them online)
+      </label>
+    </div>
+  </section>
+
+  <!-- Action -->
+  <button id="btnSeed">🌱 Seed now</button>
+  <div class="progress"><div id="prog"></div></div>
+  <div class="status" id="seedStatus"></div>
+
+  <footer>
+    <b>Note on sponsors:</b> those live in SQLite and there's no public write API.
+    Insert them via <span class="kbd">sqlite3</span> if you need to test the Local tab.
+  </footer>
+
+<script type="module">
+/* ============================================================================
+ * Standalone dev seeder — everything below runs in the browser and only
+ * calls public server endpoints.
+ * ==========================================================================*/
+
+const $ = (id) => document.getElementById(id);
+
+/* -------- LocalStorage helpers -------------------------------------------- */
+const LS = {
+    get(k, d) { const v = localStorage.getItem('seed.'+k); return v ?? d; },
+    set(k, v) { localStorage.setItem('seed.'+k, v); },
+};
+['base','lat','lon','radius','jobs','workers'].forEach((id) => {
+    const el = $(id);
+    const saved = LS.get(id);
+    if (saved && !el.value) el.value = saved;
+    el.addEventListener('change', () => LS.set(id, el.value));
+});
+
+/* -------- Sensible default base URL --------------------------------------- */
+if (!$('base').value) {
+    $('base').value = location.protocol === 'file:' || !location.hostname
+        ? 'http://localhost:3000'
+        : `${location.protocol}//${location.hostname}:3000`;
+}
+
+/* -------- Deterministic PRNG (mulberry32) --------------------------------- */
+function mulberry32(seed) {
+    let s = seed >>> 0;
+    return () => {
+        s = (s + 0x6d2b79f5) >>> 0;
+        let t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+
+/* -------- Fixture data ---------------------------------------------------- */
+const CATS = ['move','clean','plumb','electric','cab','auto','puncture','mechanic','cook'];
+
+const JOB_TITLES = [
+    ['move',     'Shift 1 sofa from 2nd floor to auto'],
+    ['move',     'Help move 2 mattresses to new flat'],
+    ['clean',    'Deep clean 1BHK after tenant move-out'],
+    ['clean',    'Weekly kitchen safai'],
+    ['plumb',    'Leaking kitchen tap needs replacement'],
+    ['plumb',    'Toilet flush not working'],
+    ['electric', 'Ceiling fan not spinning, check wiring'],
+    ['electric', 'Install 2 LED tube lights'],
+    ['cab',      'Airport drop at 5am tomorrow'],
+    ['cab',      'One-way to Pondicherry Sunday'],
+    ['auto',     'Auto to hospital, 3 people'],
+    ['auto',     'Short trip to nearby market'],
+    ['puncture', 'Bike puncture near Anna Nagar'],
+    ['mechanic', 'Car making noise, need quick check'],
+    ['cook',     'Cook lunch for 6 (South Indian veg)'],
+    ['cook',     'Weekly tiffin — 5 days'],
+];
+const WORKER_NAMES = ['Ramesh','Suresh','Priya','Karthik','Meena','Anand','Lakshmi','Vijay','Divya','Rohit'];
+
+/* -------- Disc jitter (uniform sample inside a circle) ------------------- */
+function jitter(rng, originLat, radiusKm) {
+    const r = radiusKm * Math.sqrt(rng());
+    const theta = 2 * Math.PI * rng();
+    const latPerKm = 1 / 111;
+    const lonPerKm = 1 / (111 * Math.max(0.001, Math.cos((originLat * Math.PI) / 180)));
+    return { dLat: r * Math.sin(theta) * latPerKm, dLon: r * Math.cos(theta) * lonPerKm };
+}
+
+/* -------- Fetch wrapper --------------------------------------------------- */
+async function post(base, path, body) {
+    const r = await fetch(`${base}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!r.ok) {
+        const txt = await r.text().catch(() => '');
+        throw new Error(`${r.status} ${r.statusText} @ ${path}: ${txt}`);
+    }
+    return r.json().catch(() => ({}));
+}
+
+/* -------- Health ping ----------------------------------------------------- */
+$('btnHealth').addEventListener('click', async () => {
+    const base = $('base').value.replace(/\/$/, '');
+    const el = $('healthStatus'); el.className = 'status'; el.textContent = 'pinging…';
+    try {
+        const j = await fetch(`${base}/health`).then((r) => r.json());
+        el.className = 'status ok';
+        el.textContent = `OK — live workers ${j.live_workers}, live jobs ${j.live_jobs}`;
+    } catch (e) {
+        el.className = 'status err';
+        el.textContent = `Unreachable: ${e.message}`;
+    }
+});
+
+/* -------- Browser geolocation -------------------------------------------- */
+$('btnGeo').addEventListener('click', () => {
+    const el = $('geoStatus'); el.className = 'status'; el.textContent = 'getting fix…';
+    if (!navigator.geolocation) { el.className = 'status err'; el.textContent = 'no geolocation API'; return; }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            $('lat').value = pos.coords.latitude.toFixed(6);
+            $('lon').value = pos.coords.longitude.toFixed(6);
+            LS.set('lat', $('lat').value); LS.set('lon', $('lon').value);
+            el.className = 'status ok';
+            el.textContent = `Got ${$('lat').value}, ${$('lon').value} (±${Math.round(pos.coords.accuracy)}m)`;
+        },
+        (err) => { el.className = 'status err'; el.textContent = err.message; },
+        { enableHighAccuracy: true, timeout: 10000 },
+    );
+});
+
+/* -------- Keep-alive heartbeat loop -------------------------------------- */
+let keepAliveTimer = null;
+const seededWorkers = [];   // { user_id, name, lat, lon, categories }
+
+async function reheartbeat(base) {
+    for (const w of seededWorkers) {
+        try { await post(base, '/api/heartbeat', w); } catch (_) { /* best-effort */ }
+    }
+}
+
+/* -------- Seed action ---------------------------------------------------- */
+$('btnSeed').addEventListener('click', async () => {
+    const base    = $('base').value.replace(/\/$/, '');
+    const lat     = parseFloat($('lat').value);
+    const lon     = parseFloat($('lon').value);
+    const radius  = parseFloat($('radius').value) || 5;
+    const nJobs   = parseInt($('jobs').value, 10)     || 0;
+    const nWorkers= parseInt($('workers').value, 10)  || 0;
+    const keep    = $('keepAlive').checked;
+
+    const el = $('seedStatus'); const prog = $('prog');
+    prog.style.width = '0%';
+    el.className = 'status'; el.textContent = 'seeding…';
+    $('btnSeed').disabled = true;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        el.className = 'status err'; el.textContent = 'Enter valid lat/lon first.';
+        $('btnSeed').disabled = false; return;
+    }
+
+    // Deterministic per-coordinate seed so screenshots stay stable.
+    const rngSeed = Math.floor((lat + 90) * 10_000) ^ Math.floor((lon + 180) * 10_000);
+    const rng = mulberry32(rngSeed);
+
+    const total = nJobs + nWorkers;
+    let done = 0;
+    const bump = () => { done++; prog.style.width = `${Math.round(done*100/total)}%`; };
+
+    let jobOk = 0, jobFail = 0, wkOk = 0, wkFail = 0;
+
+    // --- Jobs -------------------------------------------------------------
+    for (let i = 0; i < nJobs; i++) {
+        const [cat, title] = pick(rng, JOB_TITLES);
+        const j = jitter(rng, lat, radius);
+        const budget = Math.round((80 + rng() * 900) / 10) * 10;
+        try {
+            await post(base, '/api/jobs', {
+                requester_id: `seed-user-${Math.floor(rng() * 10_000)}`,
+                category: cat,
+                description: title,
+                lat: lat + j.dLat,
+                lon: lon + j.dLon,
+                budget,
+                bids_open: false,
+            });
+            jobOk++;
+        } catch (e) { jobFail++; }
+        bump();
+    }
+
+    // --- Workers ----------------------------------------------------------
+    // Remember them so the keep-alive loop can re-send their heartbeats.
+    seededWorkers.length = 0;
+    for (let i = 0; i < nWorkers; i++) {
+        const name = pick(rng, WORKER_NAMES);
+        const j = jitter(rng, lat, radius);
+        const n = 1 + Math.floor(rng() * 3);
+        const categories = [];
+        for (let k = 0; k < n; k++) {
+            const c = pick(rng, CATS);
+            if (!categories.includes(c)) categories.push(c);
+        }
+        const w = {
+            user_id: `seed-worker-${i}-${rngSeed}`,
+            name,
+            lat: lat + j.dLat,
+            lon: lon + j.dLon,
+            categories,
+        };
+        try { await post(base, '/api/heartbeat', w); wkOk++; seededWorkers.push(w); }
+        catch (e) { wkFail++; }
+        bump();
+    }
+
+    // --- Keep-alive -------------------------------------------------------
+    if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+    if (keep && wkOk > 0) {
+        keepAliveTimer = setInterval(() => reheartbeat(base), 60_000);
+    }
+
+    el.className = 'status ok';
+    el.textContent =
+        `✓ ${jobOk} jobs (${jobFail} failed), ${wkOk} workers (${wkFail} failed) `
+      + `around ${lat.toFixed(4)}, ${lon.toFixed(4)} (r=${radius}km)`
+      + (keep ? ` — heartbeats will refresh every 60s` : '');
+
+    $('btnSeed').disabled = false;
+});
+</script>
+</body>
+</html>
