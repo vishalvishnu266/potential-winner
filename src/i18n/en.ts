@@ -124,6 +124,17 @@ const en: Messages = {
         post: 'Post',
         me:   'Me',
         more: 'More',
+        local: 'Local',
+    },
+
+    local: {
+        title: 'Local Businesses',
+        subtitle: 'Nearby shops, services & offers',
+        empty: 'No nearby offers right now.',
+        wantToList: 'Want your shop listed here?',
+        contactUs: 'Contact us',
+        seeAllLocal: 'See all local offers',
+        offer: 'Offer',
     },
 
     category: {

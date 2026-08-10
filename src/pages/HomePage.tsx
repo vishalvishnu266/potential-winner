@@ -4,6 +4,7 @@ import { Plus, Search, ShieldAlert, User } from 'lucide-react';
 import ModeToggle, { AppMode } from '../components/ModeToggle';
 import CategoryTile from '../components/CategoryTile';
 import BigButton from '../components/BigButton';
+import SponsorStrip from '../components/SponsorStrip';
 import { CATEGORIES, labelOf } from '../data/categories';
 import { useStorage } from '../composables/useStorage';
 import { useAuth } from '../composables/useAuth';
@@ -84,6 +85,9 @@ export default function HomePage() {
                     />
                 ))}
             </div>
+
+            {/* Organic, dismissible sponsor discovery — never a popup. */}
+            <SponsorStrip />
 
             {/* Bottom CTAs */}
             <div className="mx-4 mt-6 space-y-3">

@@ -111,6 +111,24 @@ export const api = {
         return req<NearbyResp>(`/api/nearby?${p}`);
     },
 
+    /**
+     * Sponsor-only lookup — used by the "Local" tab and the subtle
+     * strip on Home.  We reuse `/api/nearby` and simply discard the
+     * jobs/workers portion.  A huge radius means "everything the
+     * server would show for this location"; the server's own per-sponsor
+     * `radius_km` still gates who sees whom.
+     *
+     * Kept isolated so we can later add a dedicated `/api/sponsors`
+     * endpoint without touching callers.
+     */
+    sponsorsNear: async (lat: number, lon: number, radius_km = 50) => {
+        const p = new URLSearchParams({
+            lat: String(lat), lon: String(lon), radius_km: String(radius_km),
+        });
+        const r = await req<NearbyResp>(`/api/nearby?${p}`);
+        return r.sponsors;
+    },
+
     getJob: (id: string) => req<Job>(`/api/jobs/${id}`),
 
     acceptJob: (id: string, doer_id: string) =>

@@ -131,6 +131,17 @@ export interface Messages {
         post: string;
         me: string;
         more: string;
+        local: string;
+    };
+
+    local: {
+        title: string;
+        subtitle: string;
+        empty: string;
+        wantToList: string;
+        contactUs: string;
+        seeAllLocal: string;
+        offer: string;
     };
 
     /**

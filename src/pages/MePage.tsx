@@ -1,23 +1,33 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Check, LogIn, LogOut, Send, ShieldCheck, User as UserIcon,
+  ArrowLeft, Check, Info, Languages, LogIn, LogOut, Moon,
+  RefreshCw, Send, ShieldCheck, Smartphone, Sun,
+  User as UserIcon, type LucideIcon,
 } from 'lucide-react';
 import BigButton from '../components/BigButton';
 import { useAuth } from '../composables/useAuth';
 import { useHeartbeat } from '../composables/useHeartbeat';
+import { useTheme } from '../composables/useTheme';
+import { useOta } from '../composables/useOta';
 import { CATEGORIES, labelOf } from '../data/categories';
 import { api } from '../data/api';
-import { useT } from '../i18n';
+import { AVAILABLE_LOCALES, useI18n } from '../i18n';
+import { hapticTap } from '../composables/useNative';
+
+declare const __APP_VERSION__: string;
 
 /**
- * Profile screen — modern card layout, focused on identity and being
- * "on call" as a doer.  App-level preferences (theme, language) now
- * live on the Settings page, not here.
+ * "Me" is now the single hub for the user: profile + availability +
+ * skills, followed by app preferences (appearance / language / updates
+ * / about).  This deliberately merges what used to be a separate
+ * Settings tab so we can free that slot for the Local (sponsors) tab.
  */
 export default function MePage() {
     const { user, ready, login, logout } = useAuth();
-    const t = useT();
+    const { theme, setTheme, resolved } = useTheme();
+    const { locale, t, setLocale } = useI18n();
+    const { checkForUpdate, isCheckingManually, statusMessage } = useOta();
     const nav = useNavigate();
 
     const [phone, setPhone]   = useState('');
@@ -49,6 +59,8 @@ export default function MePage() {
 
     if (!ready) return null;
 
+    const isDark = resolved === 'dark';
+
     return (
         <div className="min-h-full">
             <header className="pt-safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-[var(--color-hairline)] bg-[color:color-mix(in_srgb,var(--color-bg)_90%,transparent)] px-3 py-3 backdrop-blur-md">
@@ -59,7 +71,7 @@ export default function MePage() {
                 <h1 className="text-lg font-bold">{t.me.title}</h1>
             </header>
 
-            {/* Profile hero */}
+            {/* --- Profile hero ------------------------------------------------ */}
             <div className="mx-4 mt-4 card p-4">
                 <div className="flex items-center gap-3">
                     <div className={user ? 'ring-brand' : ''}>
@@ -87,21 +99,21 @@ export default function MePage() {
                 </div>
             </div>
 
-            {/* Login form */}
+            {/* --- Sign-in form (only when logged out) ------------------------- */}
             {!user && (
                 <div className="mx-4 mt-3 card space-y-3 p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold">
-                        <LogIn size={18} className="text-primary" /> {t.common.signIn}
+                        <LogIn size={18} className="text-[var(--color-primary)]" /> {t.common.signIn}
                     </div>
                     <input
                         type="tel" inputMode="tel" placeholder={t.me.phone}
                         value={phone} onChange={(e) => setPhone(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-[var(--color-primary)] focus:outline-none"
                     />
                     <input
                         type="text" placeholder={t.me.yourName}
                         value={name} onChange={(e) => setName(e.target.value)}
-                        className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-primary focus:outline-none"
+                        className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-[var(--color-primary)] focus:outline-none"
                     />
                     {!otpSent ? (
                         <BigButton tone="primary" icon={<Send size={18} />} onClick={doSend}>
@@ -112,7 +124,7 @@ export default function MePage() {
                             <input
                                 type="tel" inputMode="numeric" placeholder={t.me.enterOtp}
                                 value={otp} onChange={(e) => setOtp(e.target.value)}
-                                className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-primary focus:outline-none"
+                                className="w-full rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-2)] p-3 text-[15px] focus:border-[var(--color-primary)] focus:outline-none"
                             />
                             <BigButton tone="good" icon={<ShieldCheck size={18} />} onClick={doVerify}>
                                 {t.me.verifyAndSignIn}
@@ -123,7 +135,7 @@ export default function MePage() {
                 </div>
             )}
 
-            {/* Availability */}
+            {/* --- Availability + skills ------------------------------------- */}
             {user && (
                 <div className="mx-4 mt-3 card p-4">
                     <div className="flex items-center justify-between">
@@ -139,19 +151,7 @@ export default function MePage() {
                                 {hb.online ? t.me.visible : t.me.offline}
                             </div>
                         </div>
-                        <button
-                            aria-pressed={hb.online}
-                            onClick={() => hb.online ? hb.stop() : hb.start()}
-                            className={
-                                'press relative h-7 w-12 rounded-full transition-colors ' +
-                                (hb.online ? 'bg-grad-good' : 'bg-[var(--color-surface-2)] border border-border')
-                            }
-                        >
-                            <span className={
-                                'absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform ' +
-                                (hb.online ? 'translate-x-5' : 'translate-x-0')
-                            } />
-                        </button>
+                        <Switch checked={hb.online} onChange={(v) => v ? hb.start() : hb.stop()} />
                     </div>
 
                     <div className="mt-4">
@@ -169,7 +169,7 @@ export default function MePage() {
                                         className={
                                             'press flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ' +
                                             (on
-                                                ? 'bg-grad-brand text-white shadow-[var(--shadow-brand)]'
+                                                ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-[var(--shadow-brand)]'
                                                 : 'border border-border bg-[var(--color-surface-2)]')
                                         }
                                     >
@@ -183,6 +183,96 @@ export default function MePage() {
                     </div>
                 </div>
             )}
+
+            {/* --- SETTINGS (merged from previous SettingsPage) --------------- */}
+
+            {/* Appearance */}
+            <div className="mx-4 mt-4 card p-4">
+                <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className={
+                            'flex h-11 w-11 items-center justify-center rounded-2xl ' +
+                            (isDark ? 'tint-violet' : 'tint-amber')
+                        }>
+                            {isDark ? <Moon size={22} /> : <Sun size={22} />}
+                        </div>
+                        <div>
+                            <div className="text-[15px] font-semibold">{t.me.appearance}</div>
+                            <div className="text-xs text-muted">
+                                {theme === 'system' ? 'System'
+                                    : isDark
+                                        ? t.me.dark.replace(/^\S+\s/, '')
+                                        : t.me.light.replace(/^\S+\s/, '')}
+                            </div>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={isDark}
+                        onChange={(v) => { hapticTap(); setTheme(v ? 'dark' : 'light'); }}
+                        ariaLabel="Dark mode"
+                    />
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                    <Chip active={theme === 'light'} onClick={() => setTheme('light')}
+                          Icon={Sun}       label={t.me.light.replace(/^\S+\s/, '')} />
+                    <Chip active={theme === 'dark'} onClick={() => setTheme('dark')}
+                          Icon={Moon}      label={t.me.dark.replace(/^\S+\s/, '')} />
+                    <Chip active={theme === 'system'} onClick={() => setTheme('system')}
+                          Icon={Smartphone} label={t.me.system.replace(/^\S+\s/, '')} />
+                </div>
+            </div>
+
+            {/* Language */}
+            <div className="mx-4 mt-4 card p-4">
+                <div className="mb-3 flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl tint-blue">
+                        <Languages size={22} />
+                    </div>
+                    <div>
+                        <div className="text-[15px] font-semibold">{t.me.language}</div>
+                        <div className="text-xs text-muted">
+                            {AVAILABLE_LOCALES.find(l => l.code === locale)?.native}
+                        </div>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_LOCALES.map((l) => {
+                        const active = l.code === locale;
+                        return (
+                            <button
+                                key={l.code}
+                                onClick={() => { hapticTap(); setLocale(l.code); }}
+                                className={
+                                    'press flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ' +
+                                    (active
+                                        ? 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-[var(--shadow-brand)]'
+                                        : 'border border-border bg-[var(--color-surface-2)] text-text')
+                                }
+                            >
+                                <span className="text-base">{l.emoji}</span>
+                                <span>{l.native}</span>
+                                {active && <Check size={16} />}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Updates + About */}
+            <div className="mx-4 mt-4 card divide-y divide-[var(--color-hairline)]">
+                <Row
+                    Icon={RefreshCw}
+                    title={isCheckingManually ? 'Checking…' : 'Check for updates'}
+                    subtitle={statusMessage}
+                    disabled={isCheckingManually}
+                    onClick={() => { hapticTap(); checkForUpdate(false); }}
+                />
+                <Row
+                    Icon={Info}
+                    title="About"
+                    subtitle={`v${__APP_VERSION__ ?? '0.0.0'}`}
+                />
+            </div>
 
             {/* Sign out */}
             {user && (
@@ -198,7 +288,87 @@ export default function MePage() {
                 </div>
             )}
 
+            <p className="mx-4 mt-6 text-center text-xs text-muted">
+                Made with <span className="text-[var(--color-primary)] font-semibold">❤︎</span> for daily helpers.
+            </p>
+
             <div className="h-8" />
         </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Small local primitives kept private to this file to keep MePage self-contained
+// ---------------------------------------------------------------------------
+
+function Switch({
+    checked, onChange, ariaLabel,
+}: { checked: boolean; onChange: (v: boolean) => void; ariaLabel?: string }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={ariaLabel}
+            onClick={() => onChange(!checked)}
+            className={
+                'press relative h-7 w-12 rounded-full transition-colors ' +
+                (checked
+                    ? 'bg-[var(--color-primary)]'
+                    : 'bg-[var(--color-surface-2)] border border-border')
+            }
+        >
+            <span className={
+                'absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow-md transition-transform ' +
+                (checked ? 'translate-x-5' : 'translate-x-0')
+            } />
+        </button>
+    );
+}
+
+function Chip({
+    active, onClick, Icon, label,
+}: { active: boolean; onClick: () => void; Icon: LucideIcon; label: string }) {
+    return (
+        <button
+            onClick={() => { hapticTap(); onClick(); }}
+            className={
+                'press flex flex-col items-center justify-center gap-1 rounded-2xl border py-3 text-xs font-semibold ' +
+                (active
+                    ? 'border-transparent bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-[var(--shadow-brand)]'
+                    : 'border-border bg-[var(--color-surface-2)] text-text')
+            }
+        >
+            <Icon size={20} strokeWidth={2.2} />
+            <span>{label}</span>
+        </button>
+    );
+}
+
+function Row({
+    Icon, title, subtitle, onClick, disabled,
+}: {
+    Icon: LucideIcon; title: string; subtitle?: string;
+    onClick?: () => void; disabled?: boolean;
+}) {
+    const isButton = !!onClick;
+    const Comp: any = isButton ? 'button' : 'div';
+    return (
+        <Comp
+            onClick={onClick}
+            disabled={disabled}
+            className={
+                'flex w-full items-center gap-3 p-4 text-left ' +
+                (isButton ? 'press disabled:opacity-50' : '')
+            }
+        >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-surface-2)] text-muted">
+                <Icon size={20} strokeWidth={2} />
+            </div>
+            <div className="flex-1">
+                <div className="text-[15px] font-semibold">{title}</div>
+                {subtitle && <div className="text-xs text-muted">{subtitle}</div>}
+            </div>
+        </Comp>
     );
 }

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, PlusSquare, User, Settings, type LucideIcon } from 'lucide-react';
+import { Home, Search, PlusSquare, User, Store, type LucideIcon } from 'lucide-react';
 import { hapticTap } from '../composables/useNative';
 import { getTabForPath } from '../router';
 import { useT } from '../i18n';
@@ -19,12 +19,15 @@ export default function TabBar() {
   const current = getTabForPath(location.pathname);
   const t = useT();
 
+  // Settings is now merged into the Me page, freeing this slot for a
+  // dedicated "Local" tab that surfaces sponsors organically.  Users who
+  // never tap it will never see an ad.
   const tabs: Tab[] = [
-    { name: 'home',     label: t.tab.home, path: '/',         Icon: Home },
-    { name: 'work',     label: t.tab.work, path: '/work',     Icon: Search },
-    { name: 'post',     label: t.tab.post, path: '/post',     Icon: PlusSquare },
-    { name: 'me',       label: t.tab.me,   path: '/me',       Icon: User },
-    { name: 'settings', label: t.tab.more, path: '/settings', Icon: Settings },
+    { name: 'home',  label: t.tab.home,  path: '/',      Icon: Home },
+    { name: 'work',  label: t.tab.work,  path: '/work',  Icon: Search },
+    { name: 'post',  label: t.tab.post,  path: '/post',  Icon: PlusSquare },
+    { name: 'local', label: t.tab.local, path: '/local', Icon: Store },
+    { name: 'me',    label: t.tab.me,    path: '/me',    Icon: User },
   ];
 
   const go = (tab: Tab) => {
