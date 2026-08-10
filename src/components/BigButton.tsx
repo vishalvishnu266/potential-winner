@@ -20,11 +20,13 @@ export interface BigButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> 
   loading?: boolean;
 }
 
+// Per the design brief: buttons are SOLID colours only — no gradients on
+// interactive surfaces.  Shadows kept subtle to imply lift.
 const TONES: Record<BigButtonTone, string> = {
-  primary: 'bg-grad-brand text-white shadow-[var(--shadow-brand)] border border-transparent',
-  good:    'bg-grad-good  text-white shadow-md border border-transparent',
-  warn:    'bg-[var(--color-warn)] text-black shadow-md border border-transparent',
-  bad:     'bg-grad-bad   text-white shadow-md border border-transparent',
+  primary: 'bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-[var(--shadow-brand)] border border-transparent',
+  good:    'bg-[var(--color-good)]    text-white shadow-sm border border-transparent',
+  warn:    'bg-[var(--color-warn)]    text-black shadow-sm border border-transparent',
+  bad:     'bg-[var(--color-bad)]     text-white shadow-sm border border-transparent',
   ghost:   'bg-[var(--color-surface-2)] text-text border border-transparent hover:bg-[var(--color-surface)]',
   outline: 'bg-transparent text-text border border-border',
 };

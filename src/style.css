@@ -15,107 +15,111 @@
  */
 /*
  * ---------------------------------------------------------------------------
- * Brand palette — Indian Tricolour (Tiraṅgā)
+ * Brand palette — clean neutral surfaces, solid CTA, tricolour only in
+ * a *very subtle* background wash.
  * ---------------------------------------------------------------------------
- * Palette drawn from the flag of India.  Colours are lifted from the
- * Bureau of Indian Standards spec (IS-1) for authenticity, then softly
- * balanced for on-screen contrast.
+ * Design rules (per the user's request):
  *
- *   • Primary  = Saffron  (#FF9933) — the top band. Warm, welcoming,
- *                and immediately recognisable to Indian users.
- *   • Accent   = India Green (#138808) — the bottom band. Perfect
- *                complement to saffron; used for "go/available/paid".
- *   • Deep     = Navy Blue (#000080) — the Ashoka Chakra colour.
- *                Used for text emphasis and secondary CTAs.
- *   • Surface  = White (#FFFFFF) — the middle band, our card colour.
- *   • Brand    = Saffron → White → Green (135° gradient), a modern
- *                take on the flag as a diagonal wash.  Not garish
- *                because we tint white with a soft off-white so the
- *                gradient reads as a smooth colour transition rather
- *                than three flat bands.
+ *   • Light mode  → variants of WHITE for bg / surface / cards.
+ *   • Dark mode   → variants of BLACK for bg / surface / cards.
+ *   • Buttons     → SOLID colour (no gradients on interactive elements).
+ *   • Only place the tricolour appears is a whisper-soft background
+ *     wash (saffron + green radial glows) that hints at the flag but
+ *     never dominates.
+ *
+ * Primary is India green (#138808 light / #4ea94a dark) — solid, bold,
+ * and immediately readable as an action.  Warning + errors get their
+ * own hues so we never rely on the primary for status.
  * ---------------------------------------------------------------------------
  */
 @theme {
-  /* Neutrals biased slightly warm to sit well against saffron. */
-  --color-bg:         #fdfaf3;
-  --color-bg-2:       #f6efe0;
+  /* --- LIGHT MODE: variants of white ------------------------------------ */
+  --color-bg:         #f7f7f8;
+  --color-bg-2:       #f0f0f2;
   --color-surface:    #ffffff;
-  --color-surface-2:  #fbf6ec;
-  --color-border:     #ecdfc4;
-  --color-hairline:   rgba(0, 0, 128, 0.08);
-  --color-text:       #1a1a2e;    /* near-navy so body copy echoes the chakra */
+  --color-surface-2:  #f4f4f5;
+  --color-border:     #e5e5e7;
+  --color-hairline:   rgba(0, 0, 0, 0.06);
+  --color-text:       #111114;
   --color-muted:      #6b7280;
 
-  --color-primary:    #ff9933;   /* Saffron */
-  --color-primary-fg: #1a1a2e;   /* Navy text on saffron for AA contrast */
-  --color-accent:     #138808;   /* India Green */
-  --color-deep:       #000080;   /* Navy Blue (chakra) */
+  --color-primary:    #138808;   /* India Green — solid, bold action colour */
+  --color-primary-fg: #ffffff;
+  --color-accent:     #ff9933;   /* Saffron — reserved for special highlights */
+  --color-deep:       #000080;   /* Chakra navy — reserved for links */
 
   --color-good:    #138808;      /* Green from flag */
-  --color-warn:    #ff9933;      /* Saffron doubles as warn */
-  --color-bad:     #c1272d;      /* Warm red (avoids clashing with saffron) */
+  --color-warn:    #f59e0b;      /* Amber, distinct from saffron accent */
+  --color-bad:     #dc2626;
 
-  /* Signature gradient — Saffron → soft-white → Green.
-   * The middle stop is nudged off-pure-white so we get a smooth
-   * transition rather than three flat flag bands. */
-  --grad-brand:   linear-gradient(135deg, #ff9933 0%, #fff7e6 50%, #138808 100%);
-  --grad-brand-2: linear-gradient(135deg, #ff9933 0%, #138808 100%);
-  --grad-good:    linear-gradient(135deg, #138808 0%, #4ea94a 100%);
-  --grad-bad:     linear-gradient(135deg, #c1272d 0%, #ff5a1f 100%);
-  --grad-cool:    linear-gradient(180deg, #eef5e9 0%, #ffffff 100%);
-  --grad-warm:    linear-gradient(180deg, #fff3e0 0%, #fffaf0 100%);
+  /* Signature "brand" now = the primary as a solid, since the request
+   * was to keep buttons solid.  Kept as a var so components that ask
+   * for `--grad-brand` still get something sensible. */
+  --grad-brand:     var(--color-primary);
+  --grad-brand-2:   var(--color-primary);
+  --grad-good:      var(--color-good);
+  --grad-bad:       var(--color-bad);
+  --grad-cool:      linear-gradient(180deg, #f4f4f5 0%, #ffffff 100%);
+  --grad-warm:      linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
 
-  --shadow-card:      0 1px 2px rgba(0, 0, 128, 0.04), 0 4px 12px rgba(0, 0, 128, 0.05);
-  --shadow-elevated:  0 4px 8px rgba(0, 0, 128, 0.06), 0 12px 32px rgba(0, 0, 128, 0.08);
-  --shadow-brand:     0 6px 24px -6px rgba(255, 153, 51, 0.55);
+  --shadow-card:      0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-elevated:  0 4px 8px rgba(0, 0, 0, 0.06), 0 12px 32px rgba(0, 0, 0, 0.08);
+  --shadow-brand:     0 6px 20px -8px rgba(19, 136, 8, 0.45);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                "Helvetica Neue", "Inter", sans-serif;
 }
 
-/* Dark palette — tricolour re-tuned for a deep navy background so
- * saffron and green retain their identity without glare. */
+/* --- DARK MODE: pure variants of black --------------------------------- */
 :root[data-theme="dark"] {
-  --color-bg:         #0d0d1a;   /* near-navy black */
-  --color-bg-2:       #12122a;
-  --color-surface:    #181832;
-  --color-surface-2:  #212148;
-  --color-border:     #2b2b55;
+  --color-bg:         #0a0a0a;
+  --color-bg-2:       #111112;
+  --color-surface:    #161618;
+  --color-surface-2:  #1e1e21;
+  --color-border:     #26262a;
   --color-hairline:   rgba(255, 255, 255, 0.06);
-  --color-text:       #f5f5ff;
-  --color-muted:      #a5a5c0;
-  --color-primary:    #ffb066;   /* brighter saffron for dark bg contrast */
-  --color-primary-fg: #0d0d1a;
-  --color-accent:     #4ea94a;   /* softened green for legibility on dark */
-  --color-deep:       #7c9bff;   /* moonlit chakra for links / emphasis */
+  --color-text:       #f4f4f5;
+  --color-muted:      #a1a1aa;
+  --color-primary:    #4ea94a;   /* brighter India green for dark bg */
+  --color-primary-fg: #0a0a0a;
+  --color-accent:     #ffb066;   /* saffron kept as accent only */
+  --color-deep:       #7c9bff;   /* readable chakra blue for links */
 
-  --grad-cool:  linear-gradient(180deg, #0e2a12 0%, #12122a 100%);
-  --grad-warm:  linear-gradient(180deg, #3a1a0f 0%, #12122a 100%);
+  --grad-brand:     var(--color-primary);
+  --grad-brand-2:   var(--color-primary);
+  --grad-good:      var(--color-good);
+  --grad-bad:       var(--color-bad);
+  --grad-cool:      linear-gradient(180deg, #111112 0%, #0a0a0a 100%);
+  --grad-warm:      linear-gradient(180deg, #161618 0%, #0a0a0a 100%);
 
-  --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
-  --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-brand:    0 6px 24px -6px rgba(255, 176, 102, 0.5);
+  --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.6), 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-brand:    0 6px 20px -8px rgba(78, 169, 74, 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-bg:         #0d0d1a;
-    --color-bg-2:       #12122a;
-    --color-surface:    #181832;
-    --color-surface-2:  #212148;
-    --color-border:     #2b2b55;
+    --color-bg:         #0a0a0a;
+    --color-bg-2:       #111112;
+    --color-surface:    #161618;
+    --color-surface-2:  #1e1e21;
+    --color-border:     #26262a;
     --color-hairline:   rgba(255, 255, 255, 0.06);
-    --color-text:       #f5f5ff;
-    --color-muted:      #a5a5c0;
-    --color-primary:    #ffb066;
-    --color-primary-fg: #0d0d1a;
-    --color-accent:     #4ea94a;
+    --color-text:       #f4f4f5;
+    --color-muted:      #a1a1aa;
+    --color-primary:    #4ea94a;
+    --color-primary-fg: #0a0a0a;
+    --color-accent:     #ffb066;
     --color-deep:       #7c9bff;
-    --grad-cool:  linear-gradient(180deg, #0e2a12 0%, #12122a 100%);
-    --grad-warm:  linear-gradient(180deg, #3a1a0f 0%, #12122a 100%);
-    --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
-    --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.5);
-    --shadow-brand:    0 6px 24px -6px rgba(255, 176, 102, 0.5);
+    --grad-brand:     var(--color-primary);
+    --grad-brand-2:   var(--color-primary);
+    --grad-good:      var(--color-good);
+    --grad-bad:       var(--color-bad);
+    --grad-cool:      linear-gradient(180deg, #111112 0%, #0a0a0a 100%);
+    --grad-warm:      linear-gradient(180deg, #161618 0%, #0a0a0a 100%);
+    --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.6), 0 12px 32px rgba(0, 0, 0, 0.5);
+    --shadow-brand:    0 6px 20px -8px rgba(78, 169, 74, 0.45);
   }
 }
 
@@ -136,27 +140,32 @@
   html { background: var(--color-bg); color: var(--color-text); }
   body {
     position: fixed; inset: 0; overflow: hidden;
-    /* Subtle radial wash: saffron top-right, green bottom-left — the
-     * flag rotated 45°.  Extremely soft so it whispers rather than
-     * shouts (users perceive the palette without seeing bands). */
+    /* The ONLY place the tricolour appears — three very soft radial
+     * washes (saffron top, white middle, green bottom) that hint at
+     * the flag without imposing a colour identity on any content.
+     * Opacity is deliberately tiny (~5–7%) so cards, text and
+     * buttons remain neutral. */
     background:
-      radial-gradient(1200px 500px at 100% -10%, rgba(255, 153,  51, 0.10), transparent 60%),
-      radial-gradient(900px  500px at -10% 100%, rgba( 19, 136,   8, 0.08), transparent 60%),
+      radial-gradient(1400px 480px at 50%  -8%, rgba(255, 153,  51, 0.07), transparent 65%),
+      radial-gradient(1200px 460px at 50%  50%, rgba(255, 255, 255, 0.05), transparent 70%),
+      radial-gradient(1400px 480px at 50% 108%, rgba( 19, 136,   8, 0.06), transparent 65%),
       var(--color-bg);
     color: var(--color-text);
     transition: background-color 200ms ease, color 200ms ease;
   }
   :root[data-theme="dark"] body {
     background:
-      radial-gradient(1200px 500px at 100% -10%, rgba(255, 176, 102, 0.10), transparent 60%),
-      radial-gradient(900px  500px at -10% 100%, rgba( 78, 169,  74, 0.10), transparent 60%),
+      radial-gradient(1400px 480px at 50%  -8%, rgba(255, 176, 102, 0.05), transparent 65%),
+      radial-gradient(1200px 460px at 50%  50%, rgba(255, 255, 255, 0.02), transparent 70%),
+      radial-gradient(1400px 480px at 50% 108%, rgba( 78, 169,  74, 0.05), transparent 65%),
       var(--color-bg);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) body {
       background:
-        radial-gradient(1200px 500px at 100% -10%, rgba(255, 176, 102, 0.10), transparent 60%),
-        radial-gradient(900px  500px at -10% 100%, rgba( 78, 169,  74, 0.10), transparent 60%),
+        radial-gradient(1400px 480px at 50%  -8%, rgba(255, 176, 102, 0.05), transparent 65%),
+        radial-gradient(1200px 460px at 50%  50%, rgba(255, 255, 255, 0.02), transparent 70%),
+        radial-gradient(1400px 480px at 50% 108%, rgba( 78, 169,  74, 0.05), transparent 65%),
         var(--color-bg);
     }
   }
@@ -201,20 +210,23 @@
   }
   .press:active { transform: scale(0.97); filter: brightness(0.97); }
 
-  /* Gradient helpers. */
-  .bg-grad-brand    { background-image: var(--grad-brand); }
-  .bg-grad-brand-2  { background-image: var(--grad-brand-2); }
-  .bg-grad-good     { background-image: var(--grad-good); }
-  .bg-grad-bad      { background-image: var(--grad-bad); }
+  /* Brand helpers.
+   * Per the "solid buttons only" rule, `bg-grad-brand` is now a solid
+   * fill of the primary colour rather than a gradient.  Kept as the
+   * same class name so no page code has to change. */
+  .bg-grad-brand    { background: var(--color-primary); }
+  .bg-grad-brand-2  { background: var(--color-primary); }
+  .bg-grad-good     { background: var(--color-good); }
+  .bg-grad-bad      { background: var(--color-bad); }
   .bg-grad-cool     { background-image: var(--grad-cool); }
   .bg-grad-warm     { background-image: var(--grad-warm); }
 
-  /* Text gradient (for the brand wordmark). */
+  /* Text emphasis — solid primary instead of a gradient wordmark. */
   .text-grad-brand {
-    background-image: var(--grad-brand-2);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--color-primary);
+    background: none;
+    -webkit-background-clip: initial;
+    background-clip: initial;
   }
 
   /* Reusable card look. Cards no longer need thick borders. */
@@ -238,9 +250,9 @@
     padding: 4px;
   }
 
-  /* Ring around an "unread"/"active" avatar (IG stories style). */
+  /* Ring around an "unread"/"active" avatar. Solid primary now. */
   .ring-brand {
-    background: var(--grad-brand);
+    background: var(--color-primary);
     padding: 2px;
     border-radius: 9999px;
   }
