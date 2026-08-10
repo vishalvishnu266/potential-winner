@@ -27,14 +27,34 @@ const state: OtaState = {
 
 const listeners = new Set<() => void>();
 function emit() { listeners.forEach((l) => l()); }
+/**
+ * Merge a state patch AND only re-emit to subscribers when at least one
+ * field actually changed.  Previously we emitted on every poll tick even
+ * when the message was identical, which caused a re-render storm across
+ * every screen that consumed `useOta()` — the whole app appeared to
+ * "update every second".
+ */
 function setState(patch: Partial<OtaState>) {
-    Object.assign(state, patch);
-    emit();
+    let changed = false;
+    for (const k of Object.keys(patch) as (keyof OtaState)[]) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((state as any)[k] !== (patch as any)[k]) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (state as any)[k] = (patch as any)[k];
+            changed = true;
+        }
+    }
+    if (changed) emit();
 }
 
 // Guard against re-applying the same version repeatedly (each poll would
 // otherwise call .set() again if we don't remember what we already applied).
 let lastAppliedVersion: string | null = null;
+
+// Versions we've already *tried* (and either applied or failed on).
+// Prevents the auto-poller from hammering `download()` forever when the
+// server keeps advertising the same failing version.
+const attemptedVersions = new Set<string>();
 
 // Guard against overlapping polls (auto-poll + resume listener + manual click)
 let inFlight: Promise<void> | null = null;
@@ -84,7 +104,13 @@ async function doCheck(silent: boolean): Promise<void> {
     // native side, so download()/set()/reload() all throw. Skip the whole
     // dance so we never get stuck on the "Reloading app..." overlay.
     if (Capacitor.getPlatform() === 'web') {
-        setState({ statusMessage: 'OTA disabled (web preview)' });
+        // Only set the status once — subsequent polls used to re-set the
+        // same string every tick, which still forced a re-render because
+        // of the naive setState. That's now guarded, but skipping the
+        // call entirely is cheaper and clearer.
+        if (state.statusMessage !== 'OTA disabled (web preview)') {
+            setState({ statusMessage: 'OTA disabled (web preview)' });
+        }
         return;
     }
     setState({ isUpdating: true });
@@ -119,6 +145,16 @@ async function doCheck(silent: boolean): Promise<void> {
             setState({ statusMessage: `Up to date (v${currentVersion})` });
             return;
         }
+
+        // Already tried this version in this session — either it applied
+        // and we're waiting for reload, or it errored earlier.  In either
+        // case, do NOT re-download; the poll would otherwise burn CPU
+        // and disk on every tick.
+        if (attemptedVersions.has(data.version)) {
+            setState({ statusMessage: `Waiting to apply v${data.version}` });
+            return;
+        }
+        attemptedVersions.add(data.version);
 
         // Already applied this version in a previous poll — reload was likely
         // pending. Do NOT re-download or re-set.
@@ -184,8 +220,26 @@ async function checkForUpdate(silent = false) {
     return inFlight;
 }
 
-function startAutoUpdate(intervalMs = 15000) {
+/**
+ * Start the background OTA poller.
+ *
+ * Design fixes for the "app updates every second" bug the user reported:
+ *   1. On the *web* platform there is no native updater plugin, so
+ *      polling only produces noise — skip it entirely.  Manual clicks
+ *      in Settings still work.
+ *   2. Default interval bumped from 15 seconds → 5 minutes.  Fifteen
+ *      seconds meant users saw the status update card refreshing while
+ *      trying to interact with the app.  Five minutes is plenty for OTA
+ *      and matches what most production apps do.
+ *   3. `attemptedVersions` (see doCheck) makes sure a repeated poll
+ *      never re-downloads/re-applies the same version.
+ */
+function startAutoUpdate(intervalMs = 5 * 60 * 1000) {
     stopAutoUpdate();
+
+    // Skip auto-polling in web previews — nothing meaningful can happen
+    // there and it just churns state on every tick.
+    if (Capacitor.getPlatform() === 'web') return;
 
     // Kick one off immediately (silent)
     checkForUpdate(true).catch(() => { /* noop */ });

@@ -21,7 +21,10 @@ export default function App() {
     initDeepLinks(navigate);
     // App-wide OTA poller. Runs regardless of which tab is active so a user
     // stuck on any tab still receives hot updates.
-    startAutoUpdate(15_000);
+    // Poll every 5 minutes.  Was 15 seconds — that caused the whole app
+    // to re-render on every tick and effectively became unusable when
+    // the OTA state changed on each poll.
+    startAutoUpdate(5 * 60 * 1000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
