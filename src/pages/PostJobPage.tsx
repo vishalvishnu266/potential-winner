@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, Check, Loader2, MapPin, Minus, Plus,
 } from 'lucide-react';
+// Loader2 is used both for the submit-in-flight spinner and for the
+// GPS-fetching card (see the location section below).
 import BigButton from '../components/BigButton';
 import CategoryTile from '../components/CategoryTile';
 import { CATEGORIES, CategoryKey, classify, metaOf, labelOf } from '../data/categories';
@@ -138,15 +140,24 @@ export default function PostJobPage() {
                 </div>
             </div>
 
-            {/* Location */}
+            {/* Location — same three-state pattern used across the app:
+             *   busy  → spinner row (never flash the button)
+             *   fix   → show coords
+             *   none  → offer the "Use my location" button.
+             */}
             <div className="mx-4 mt-4 card p-3">
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted">
                     {t.post.where}
                 </div>
                 {geo.position ? (
                     <div className="flex items-center gap-2 text-sm">
-                        <MapPin size={18} className="text-primary" />
+                        <MapPin size={18} className="text-[var(--color-primary)]" />
                         <span>{geo.position.latitude.toFixed(4)}, {geo.position.longitude.toFixed(4)}</span>
+                    </div>
+                ) : geo.busy ? (
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>{t.common.loading}</span>
                     </div>
                 ) : (
                     <BigButton tone="ghost" icon={<MapPin size={18} />} onClick={() => geo.getCurrent()}>

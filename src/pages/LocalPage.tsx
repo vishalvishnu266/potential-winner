@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Phone, Sparkles, Store } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, Phone, Sparkles, Store } from 'lucide-react';
 import { api, Sponsor } from '../data/api';
 import { useLocation as useGeo } from '../composables/useLocation';
 import { openInMaps } from '../data/maps';
@@ -55,7 +55,15 @@ export default function LocalPage() {
                 </div>
             </header>
 
-            {!geo.position && (
+            {/* Same three-state rendering as FindWorkPage — never flash
+             *  the Share-location button while a fix is being fetched. */}
+            {!geo.position && geo.busy && (
+                <div className="mx-4 mt-4 card flex items-center gap-3 p-4">
+                    <Loader2 size={18} className="animate-spin text-muted" />
+                    <div className="text-sm text-muted">{t.common.loading}</div>
+                </div>
+            )}
+            {!geo.position && !geo.busy && (
                 <div className="mx-4 mt-4 card p-6 text-center">
                     <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-surface-2)]">
                         <MapPin size={24} className="text-muted" />

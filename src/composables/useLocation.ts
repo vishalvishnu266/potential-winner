@@ -10,6 +10,11 @@ export function useLocation() {
     const [error, setError] = useState<string | null>(null);
     const [permission, setPermission] = useState<string>('unknown');
     const [watching, setWatching] = useState(false);
+    // `busy` = we are actively trying to get a GPS fix.  Consumers use this
+    // to render a loading state instead of the "Share location" gate on
+    // first load — otherwise the gate flashes for a beat, then disappears
+    // once the fix resolves (the bug the user reported).
+    const [busy, setBusy] = useState(false);
     const watchIdRef = useRef<string | null>(null);
 
     const checkPermission = useCallback(async () => {
@@ -38,6 +43,7 @@ export function useLocation() {
 
     const getCurrent = useCallback(async () => {
         setError(null);
+        setBusy(true);
         try {
             const { Geolocation } = await import('@capacitor/geolocation');
             const pos = await Geolocation.getCurrentPosition({
@@ -50,6 +56,8 @@ export function useLocation() {
         } catch (e: any) {
             setError(e?.message || 'Failed to get location');
             return null;
+        } finally {
+            setBusy(false);
         }
     }, []);
 
@@ -86,7 +94,7 @@ export function useLocation() {
     }, []);
 
     return {
-        position, timestamp, error, permission, watching,
+        position, timestamp, error, permission, watching, busy,
         checkPermission, requestPermission, getCurrent, startWatch, stopWatch,
     };
 }

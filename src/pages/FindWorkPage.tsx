@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ArrowLeft, Globe, List, MapPin, Phone, Radar as RadarIcon, Sparkles,
+  ArrowLeft, Globe, List, Loader2, MapPin, Phone, Radar as RadarIcon, Sparkles,
 } from 'lucide-react';
 import { CATEGORIES, CategoryKey, metaOf, labelOf } from '../data/categories';
 import { useLocation as useGeo } from '../composables/useLocation';
@@ -115,14 +115,29 @@ export default function FindWorkPage() {
                 </div>
             </div>
 
-            {!geo.position && (
+            {/* Location states:
+             *   1. `busy` = actively fetching a fix → show spinner (no button flash).
+             *   2. Have `position` → nothing to show, content follows.
+             *   3. No position + not busy → we tried and failed OR haven't asked
+             *      (permission denied/prompted).  Show the Share-location gate.
+             *
+             * The previous version rendered #3 while #1 was true, causing the
+             * "Share location" button to flash briefly before disappearing.
+             */}
+            {!geo.position && geo.busy && (
+                <div className="mx-4 mt-4 card flex items-center gap-3 p-4">
+                    <Loader2 size={18} className="animate-spin text-muted" />
+                    <div className="text-sm text-muted">{t.common.loading}</div>
+                </div>
+            )}
+            {!geo.position && !geo.busy && (
                 <div className="mx-4 mt-4 card p-6 text-center">
                     <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl tint-blue">
                         <MapPin size={26} />
                     </div>
                     <div className="mb-3 text-sm text-muted">{t.work.needLocation}</div>
                     <button onClick={() => geo.getCurrent()}
-                            className="press mx-auto rounded-xl bg-grad-brand px-4 py-2 text-sm font-bold text-white shadow-[var(--shadow-brand)]">
+                            className="press mx-auto rounded-xl bg-[var(--color-primary)] px-4 py-2 text-sm font-bold text-[var(--color-primary-fg)] shadow-[var(--shadow-brand)]">
                         {t.work.shareLocation}
                     </button>
                 </div>
