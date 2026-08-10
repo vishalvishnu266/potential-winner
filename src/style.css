@@ -15,96 +15,107 @@
  */
 /*
  * ---------------------------------------------------------------------------
- * Brand palette rationale
+ * Brand palette — Indian Tricolour (Tiraṅgā)
  * ---------------------------------------------------------------------------
- * We intentionally moved OFF a violet/pink hue because it read as
- * "Instagram clone".  DailyGig is a utility / trades app for real
- * daily work — the palette should feel dependable, warm, and outdoorsy.
+ * Palette drawn from the flag of India.  Colours are lifted from the
+ * Bureau of Indian Standards spec (IS-1) for authenticity, then softly
+ * balanced for on-screen contrast.
  *
- *   • Primary  = deep teal   (#0d9488) — trust, tools, uncommon in
- *                mainstream consumer apps so it's memorable.
- *   • Accent   = warm coral  (#f97316) — energetic complement, ideal
- *                for money/CTA highlights.
- *   • Brand    = teal → emerald → coral gradient — an evolving hue
- *                that ties both primary and accent together without
- *                looking gradient-of-the-year.
+ *   • Primary  = Saffron  (#FF9933) — the top band. Warm, welcoming,
+ *                and immediately recognisable to Indian users.
+ *   • Accent   = India Green (#138808) — the bottom band. Perfect
+ *                complement to saffron; used for "go/available/paid".
+ *   • Deep     = Navy Blue (#000080) — the Ashoka Chakra colour.
+ *                Used for text emphasis and secondary CTAs.
+ *   • Surface  = White (#FFFFFF) — the middle band, our card colour.
+ *   • Brand    = Saffron → White → Green (135° gradient), a modern
+ *                take on the flag as a diagonal wash.  Not garish
+ *                because we tint white with a soft off-white so the
+ *                gradient reads as a smooth colour transition rather
+ *                than three flat bands.
  * ---------------------------------------------------------------------------
  */
 @theme {
-  --color-bg:         #f7f8f7;
-  --color-bg-2:       #eef2f0;
+  /* Neutrals biased slightly warm to sit well against saffron. */
+  --color-bg:         #fdfaf3;
+  --color-bg-2:       #f6efe0;
   --color-surface:    #ffffff;
-  --color-surface-2: #f2f5f4;
-  --color-border:     #e4e7e7;
-  --color-hairline:   rgba(15, 23, 42, 0.06);
-  --color-text:       #0f172a;
-  --color-muted:      #64748b;
+  --color-surface-2:  #fbf6ec;
+  --color-border:     #ecdfc4;
+  --color-hairline:   rgba(0, 0, 128, 0.08);
+  --color-text:       #1a1a2e;    /* near-navy so body copy echoes the chakra */
+  --color-muted:      #6b7280;
 
-  --color-primary:    #0d9488;   /* deep teal */
-  --color-primary-fg: #ffffff;
-  --color-accent:     #f97316;   /* warm coral */
+  --color-primary:    #ff9933;   /* Saffron */
+  --color-primary-fg: #1a1a2e;   /* Navy text on saffron for AA contrast */
+  --color-accent:     #138808;   /* India Green */
+  --color-deep:       #000080;   /* Navy Blue (chakra) */
 
-  --color-good:    #16a34a;
-  --color-warn:    #eab308;
-  --color-bad:     #dc2626;
+  --color-good:    #138808;      /* Green from flag */
+  --color-warn:    #ff9933;      /* Saffron doubles as warn */
+  --color-bad:     #c1272d;      /* Warm red (avoids clashing with saffron) */
 
-  /* Signature gradient — teal → emerald → coral. */
-  --grad-brand:   linear-gradient(135deg, #0d9488 0%, #10b981 55%, #f97316 100%);
-  --grad-brand-2: linear-gradient(135deg, #0f766e 0%, #f97316 100%);
-  --grad-good:    linear-gradient(135deg, #059669 0%, #10b981 100%);
-  --grad-bad:     linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
-  --grad-cool:    linear-gradient(180deg, #ecfeff 0%, #f0fdfa 100%);
-  --grad-warm:    linear-gradient(180deg, #fff7ed 0%, #fef2f2 100%);
+  /* Signature gradient — Saffron → soft-white → Green.
+   * The middle stop is nudged off-pure-white so we get a smooth
+   * transition rather than three flat flag bands. */
+  --grad-brand:   linear-gradient(135deg, #ff9933 0%, #fff7e6 50%, #138808 100%);
+  --grad-brand-2: linear-gradient(135deg, #ff9933 0%, #138808 100%);
+  --grad-good:    linear-gradient(135deg, #138808 0%, #4ea94a 100%);
+  --grad-bad:     linear-gradient(135deg, #c1272d 0%, #ff5a1f 100%);
+  --grad-cool:    linear-gradient(180deg, #eef5e9 0%, #ffffff 100%);
+  --grad-warm:    linear-gradient(180deg, #fff3e0 0%, #fffaf0 100%);
 
-  --shadow-card:      0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.05);
-  --shadow-elevated:  0 4px 8px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.08);
-  --shadow-brand:     0 6px 24px -6px rgba(13, 148, 136, 0.55);
+  --shadow-card:      0 1px 2px rgba(0, 0, 128, 0.04), 0 4px 12px rgba(0, 0, 128, 0.05);
+  --shadow-elevated:  0 4px 8px rgba(0, 0, 128, 0.06), 0 12px 32px rgba(0, 0, 128, 0.08);
+  --shadow-brand:     0 6px 24px -6px rgba(255, 153, 51, 0.55);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                "Helvetica Neue", "Inter", sans-serif;
 }
 
-/* Dark palette — teal-blue-black with warm coral for CTAs.
- * Slight cool tint on surfaces to keep the "outdoors / utility" feel. */
+/* Dark palette — tricolour re-tuned for a deep navy background so
+ * saffron and green retain their identity without glare. */
 :root[data-theme="dark"] {
-  --color-bg:         #0a1414;
-  --color-bg-2:       #0f1c1c;
-  --color-surface:    #15201f;
-  --color-surface-2:  #1c2b29;
-  --color-border:     #253634;
+  --color-bg:         #0d0d1a;   /* near-navy black */
+  --color-bg-2:       #12122a;
+  --color-surface:    #181832;
+  --color-surface-2:  #212148;
+  --color-border:     #2b2b55;
   --color-hairline:   rgba(255, 255, 255, 0.06);
-  --color-text:       #ecfeff;
-  --color-muted:      #94a3b8;
-  --color-primary:    #2dd4bf;   /* brighter teal for dark mode contrast */
-  --color-primary-fg: #062120;
-  --color-accent:     #fb923c;
+  --color-text:       #f5f5ff;
+  --color-muted:      #a5a5c0;
+  --color-primary:    #ffb066;   /* brighter saffron for dark bg contrast */
+  --color-primary-fg: #0d0d1a;
+  --color-accent:     #4ea94a;   /* softened green for legibility on dark */
+  --color-deep:       #7c9bff;   /* moonlit chakra for links / emphasis */
 
-  --grad-cool:  linear-gradient(180deg, #082a2a 0%, #0d3b36 100%);
-  --grad-warm:  linear-gradient(180deg, #2a1610 0%, #3a1a0f 100%);
+  --grad-cool:  linear-gradient(180deg, #0e2a12 0%, #12122a 100%);
+  --grad-warm:  linear-gradient(180deg, #3a1a0f 0%, #12122a 100%);
 
   --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.5);
-  --shadow-brand:    0 6px 24px -6px rgba(45, 212, 191, 0.55);
+  --shadow-brand:    0 6px 24px -6px rgba(255, 176, 102, 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-bg:         #0a1414;
-    --color-bg-2:       #0f1c1c;
-    --color-surface:    #15201f;
-    --color-surface-2:  #1c2b29;
-    --color-border:     #253634;
+    --color-bg:         #0d0d1a;
+    --color-bg-2:       #12122a;
+    --color-surface:    #181832;
+    --color-surface-2:  #212148;
+    --color-border:     #2b2b55;
     --color-hairline:   rgba(255, 255, 255, 0.06);
-    --color-text:       #ecfeff;
-    --color-muted:      #94a3b8;
-    --color-primary:    #2dd4bf;
-    --color-primary-fg: #062120;
-    --color-accent:     #fb923c;
-    --grad-cool:  linear-gradient(180deg, #082a2a 0%, #0d3b36 100%);
-    --grad-warm:  linear-gradient(180deg, #2a1610 0%, #3a1a0f 100%);
+    --color-text:       #f5f5ff;
+    --color-muted:      #a5a5c0;
+    --color-primary:    #ffb066;
+    --color-primary-fg: #0d0d1a;
+    --color-accent:     #4ea94a;
+    --color-deep:       #7c9bff;
+    --grad-cool:  linear-gradient(180deg, #0e2a12 0%, #12122a 100%);
+    --grad-warm:  linear-gradient(180deg, #3a1a0f 0%, #12122a 100%);
     --shadow-card:     0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.35);
     --shadow-elevated: 0 4px 8px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.5);
-    --shadow-brand:    0 6px 24px -6px rgba(45, 212, 191, 0.55);
+    --shadow-brand:    0 6px 24px -6px rgba(255, 176, 102, 0.5);
   }
 }
 
@@ -125,26 +136,27 @@
   html { background: var(--color-bg); color: var(--color-text); }
   body {
     position: fixed; inset: 0; overflow: hidden;
-    /* Subtle radial wash — teal top-left, coral top-right, so the
-     * corners quietly hint at the brand gradient without shouting. */
+    /* Subtle radial wash: saffron top-right, green bottom-left — the
+     * flag rotated 45°.  Extremely soft so it whispers rather than
+     * shouts (users perceive the palette without seeing bands). */
     background:
-      radial-gradient(1200px 500px at 100% -10%, rgba(249, 115, 22, 0.08), transparent 60%),
-      radial-gradient(900px 500px at -10% 0%,   rgba(13, 148, 136, 0.10), transparent 60%),
+      radial-gradient(1200px 500px at 100% -10%, rgba(255, 153,  51, 0.10), transparent 60%),
+      radial-gradient(900px  500px at -10% 100%, rgba( 19, 136,   8, 0.08), transparent 60%),
       var(--color-bg);
     color: var(--color-text);
     transition: background-color 200ms ease, color 200ms ease;
   }
   :root[data-theme="dark"] body {
     background:
-      radial-gradient(1200px 500px at 100% -10%, rgba(251, 146, 60, 0.10), transparent 60%),
-      radial-gradient(900px 500px at -10% 0%,   rgba(45, 212, 191, 0.14), transparent 60%),
+      radial-gradient(1200px 500px at 100% -10%, rgba(255, 176, 102, 0.10), transparent 60%),
+      radial-gradient(900px  500px at -10% 100%, rgba( 78, 169,  74, 0.10), transparent 60%),
       var(--color-bg);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) body {
       background:
-        radial-gradient(1200px 500px at 100% -10%, rgba(251, 146, 60, 0.10), transparent 60%),
-        radial-gradient(900px 500px at -10% 0%,   rgba(45, 212, 191, 0.14), transparent 60%),
+        radial-gradient(1200px 500px at 100% -10%, rgba(255, 176, 102, 0.10), transparent 60%),
+        radial-gradient(900px  500px at -10% 100%, rgba( 78, 169,  74, 0.10), transparent 60%),
         var(--color-bg);
     }
   }

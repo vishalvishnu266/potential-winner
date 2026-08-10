@@ -14,9 +14,29 @@ export type CategoryKey =
  * colour tone).  The human label is looked up per-render via the i18n
  * bundle (`t.category[key]`) — see `labelOf()` for a helper.
  */
+/*
+ * Icon-choice rationale
+ * ---------------------
+ * Every icon here is picked to be *self-descriptive* at a glance —
+ * i.e. a user seeing only the icon (no label, no colour) should be
+ * able to guess the category.  Ambiguous alternatives that we
+ * intentionally avoided:
+ *   • Sofa            → looks like furniture, not the *action* of shifting.
+ *                       Truck reads as "moving" globally.
+ *   • Sparkles        → reads as "AI / magic", not cleaning.
+ *                       Brush is the universal cleaning motif.
+ *   • Bike            → motorcycle, not an auto-rickshaw.
+ *                       CarTaxiFront is the closest 3-wheeler feel + says "taxi".
+ *   • CircleDot       → opaque abstract shape.
+ *                       Disc3 shows a tyre-like disc for puncture.
+ *   • Utensils        → cutlery reads as "dining", not "cooking".
+ *                       CookingPot is literally a pot on a stove.
+ *   • MoreHorizontal  → three dots reads as "menu", not "more categories".
+ *                       Grid3x3 clearly shows "a group of other things".
+ */
 import {
-  Sofa, Sparkles, Droplets, Zap, Car, Bike, CircleDot,
-  Wrench, Utensils, MoreHorizontal, type LucideIcon,
+  Truck, Brush, Droplets, Zap, Car, CarTaxiFront, Disc3,
+  Wrench, CookingPot, Grid3x3, type LucideIcon,
 } from 'lucide-react';
 
 export interface CategoryMeta {
@@ -26,16 +46,16 @@ export interface CategoryMeta {
 }
 
 export const CATEGORIES: CategoryMeta[] = [
-  { key: 'move',     Icon: Sofa,             tone: 'orange' },
-  { key: 'clean',    Icon: Sparkles,         tone: 'teal'   },
-  { key: 'plumb',    Icon: Droplets,         tone: 'blue'   },
-  { key: 'electric', Icon: Zap,              tone: 'amber'  },
-  { key: 'cab',      Icon: Car,              tone: 'violet' },
-  { key: 'auto',     Icon: Bike,             tone: 'amber'  },
-  { key: 'puncture', Icon: CircleDot,        tone: 'slate'  },
-  { key: 'mechanic', Icon: Wrench,           tone: 'rose'   },
-  { key: 'cook',     Icon: Utensils,         tone: 'green'  },
-  { key: 'other',    Icon: MoreHorizontal,   tone: 'slate'  },
+  { key: 'move',     Icon: Truck,        tone: 'orange' },  // moving truck
+  { key: 'clean',    Icon: Brush,        tone: 'teal'   },  // cleaning brush
+  { key: 'plumb',    Icon: Droplets,     tone: 'blue'   },  // water drops
+  { key: 'electric', Icon: Zap,          tone: 'amber'  },  // lightning bolt
+  { key: 'cab',      Icon: Car,          tone: 'violet' },  // car
+  { key: 'auto',     Icon: CarTaxiFront, tone: 'amber'  },  // taxi (auto-rickshaw stand-in)
+  { key: 'puncture', Icon: Disc3,        tone: 'slate'  },  // tyre disc
+  { key: 'mechanic', Icon: Wrench,       tone: 'rose'   },  // spanner
+  { key: 'cook',     Icon: CookingPot,   tone: 'green'  },  // pot on stove
+  { key: 'other',    Icon: Grid3x3,      tone: 'slate'  },  // grid of "other things"
 ];
 
 export function metaOf(key: string): CategoryMeta {
