@@ -129,9 +129,22 @@ async fn check_update(Query(params): Query<UpdateQuery>) -> impl IntoResponse {
     let _ = params.channel;
     match find_latest_bundle() {
         Some((version, file)) => {
-            let available = params.current.as_deref() != Some(&version);
+            // Client is "up to date" when it reports the same version we
+            // have on disk.  Defensive comparison: trim + case-fold so a
+            // stray whitespace or leading `v` doesn't cause an infinite
+            // update loop (the exact bug we hit before this fix).
+            let normalize = |s: &str| s.trim().trim_start_matches('v').to_ascii_lowercase();
+            let same = params
+                .current
+                .as_deref()
+                .map(|c| normalize(c) == normalize(&version))
+                .unwrap_or(false);
+            let available = !same;
             let url = format!("{}/bundles/{}", public_base_url(), file);
-            tracing::info!(latest = %version, available, url = %url, "OTA check");
+            tracing::info!(
+                latest = %version, current = ?params.current, available, url = %url,
+                "OTA check",
+            );
             Json(UpdateResponse {
                 available,
                 version: Some(version),

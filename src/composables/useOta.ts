@@ -144,8 +144,14 @@ async function doCheck(silent: boolean): Promise<void> {
     try {
         const currentVersion = await getCurrentVersion();
 
+        // IMPORTANT: server expects `?current=` (see server/src/main.rs
+        // → `struct UpdateQuery { current: Option<String>, ... }`).
+        // The old `?version=` param was ignored server-side, so the
+        // server treated every poll as "current == None" ≠ latest →
+        // returned `available: true` forever → the overlay showed
+        // "Applying update..." every poll cycle.
         const response = await fetch(
-            `${getApiUrl()}/api/check-update?version=${encodeURIComponent(currentVersion)}`,
+            `${getApiUrl()}/api/check-update?current=${encodeURIComponent(currentVersion)}`,
             { cache: 'no-store' }
         );
         if (!response.ok) throw new Error('Failed to reach update server');
