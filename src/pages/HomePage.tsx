@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Search, ShieldAlert, User } from 'lucide-react';
 import ModeToggle, { AppMode } from '../components/ModeToggle';
 import CategoryTile from '../components/CategoryTile';
 import BigButton from '../components/BigButton';
@@ -10,6 +11,11 @@ import { useT } from '../i18n';
 
 const MODE_KEY = 'dg.mode';
 
+/**
+ * Home = a modern feed-style layout with a stories-esque header + a
+ * segmented mode toggle + colourful category tiles.  Instagram/Facebook
+ * users should feel right at home.
+ */
 export default function HomePage() {
     const nav = useNavigate();
     const t = useT();
@@ -28,7 +34,6 @@ export default function HomePage() {
     async function changeMode(m: AppMode) {
         setMode(m); await storage.set(MODE_KEY, m);
     }
-
     function pick(catKey: string) {
         if (mode === 'help') nav(`/post?category=${catKey}`);
         else nav(`/work?category=${catKey}`);
@@ -38,35 +43,41 @@ export default function HomePage() {
 
     return (
         <div className="min-h-full">
-            <header className="pt-safe-top px-5 pb-3 pt-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="text-2xl font-extrabold tracking-tight">{t.app.name}</div>
-                        <div className="text-sm text-muted">{greet}</div>
+            {/* Sticky IG-style top bar */}
+            <header className="pt-safe-top sticky top-0 z-10 flex items-center justify-between px-4 py-3 backdrop-blur-md bg-[color:color-mix(in_srgb,var(--color-bg)_85%,transparent)]">
+                <div>
+                    <div className="text-2xl font-extrabold tracking-tight text-grad-brand">
+                        {t.app.name}
                     </div>
-                    <button
-                        onClick={() => nav('/me')}
-                        aria-label={t.common.profile}
-                        className="press flex h-12 w-12 items-center justify-center rounded-full border border-border bg-[var(--color-surface)] text-2xl"
-                    >
-                        👤
-                    </button>
+                    <div className="mt-0.5 text-xs text-muted">{greet}</div>
                 </div>
+                <button
+                    onClick={() => nav('/me')}
+                    aria-label={t.common.profile}
+                    className="press ring-brand"
+                >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)] text-muted">
+                        <User size={20} />
+                    </span>
+                </button>
             </header>
 
-            <div className="px-5">
+            {/* Mode segmented control */}
+            <div className="px-4">
                 <ModeToggle value={mode} onChange={changeMode} />
             </div>
 
-            <p className="mx-5 mt-4 text-base text-muted">
+            {/* Section title */}
+            <p className="mx-4 mt-5 text-sm font-medium text-muted">
                 {mode === 'help' ? t.home.pickHelp : t.home.pickWork}
             </p>
 
-            <div className="mx-5 mt-3 grid grid-cols-3 gap-3">
+            {/* Category grid */}
+            <div className="mx-4 mt-3 grid grid-cols-3 gap-3">
                 {CATEGORIES.map((c) => (
                     <CategoryTile
                         key={c.key}
-                        emoji={c.emoji}
+                        Icon={c.Icon}
                         label={labelOf(t.category, c.key)}
                         tone={c.tone}
                         onClick={() => pick(c.key)}
@@ -74,17 +85,23 @@ export default function HomePage() {
                 ))}
             </div>
 
-            <div className="mx-5 mt-6 space-y-3">
+            {/* Bottom CTAs */}
+            <div className="mx-4 mt-6 space-y-3">
                 {mode === 'help' ? (
-                    <BigButton tone="primary" icon="➕" onClick={() => nav('/post')}>
+                    <BigButton tone="primary" icon={<Plus size={20} />} onClick={() => nav('/post')}>
                         {t.home.postNew}
                     </BigButton>
                 ) : (
-                    <BigButton tone="good" icon="🔍" onClick={() => nav('/work')}>
+                    <BigButton tone="good" icon={<Search size={20} />} onClick={() => nav('/work')}>
                         {t.home.seeAll}
                     </BigButton>
                 )}
-                <BigButton tone="bad" icon="🆘" onClick={() => alert(t.home.sosSoon)}>
+                <BigButton
+                    tone="outline"
+                    icon={<ShieldAlert size={20} className="text-[var(--color-bad)]" />}
+                    onClick={() => alert(t.home.sosSoon)}
+                    className="text-[var(--color-bad)] border-[var(--color-bad)]/30"
+                >
                     {t.home.sos}
                 </BigButton>
             </div>

@@ -104,6 +104,7 @@ export interface Messages {
 
     me: {
         title: string;                      // "Me"
+        settings: string;                   // "Settings"
         notSignedIn: string;
         signInHint: string;
         phone: string;

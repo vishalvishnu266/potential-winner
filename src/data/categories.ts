@@ -10,27 +10,32 @@ export type CategoryKey =
   | 'cook' | 'other';
 
 /**
- * Category metadata contains only *locale-independent* fields (emoji,
+ * Category metadata contains only *locale-independent* fields (icon,
  * colour tone).  The human label is looked up per-render via the i18n
- * bundle (`t.category[key]`) — see `metaOf()` for a helper.
+ * bundle (`t.category[key]`) — see `labelOf()` for a helper.
  */
+import {
+  Sofa, Sparkles, Droplets, Zap, Car, Bike, CircleDot,
+  Wrench, Utensils, MoreHorizontal, type LucideIcon,
+} from 'lucide-react';
+
 export interface CategoryMeta {
   key: CategoryKey;
-  emoji: string;
+  Icon: LucideIcon;
   tone: 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'teal' | 'orange' | 'slate';
 }
 
 export const CATEGORIES: CategoryMeta[] = [
-  { key: 'move',     emoji: '🛋️', tone: 'orange' },
-  { key: 'clean',    emoji: '🧹', tone: 'teal'   },
-  { key: 'plumb',    emoji: '💧', tone: 'blue'   },
-  { key: 'electric', emoji: '⚡', tone: 'amber'  },
-  { key: 'cab',      emoji: '🚗', tone: 'violet' },
-  { key: 'auto',     emoji: '🛺', tone: 'amber'  },
-  { key: 'puncture', emoji: '🛞', tone: 'slate'  },
-  { key: 'mechanic', emoji: '🔧', tone: 'rose'   },
-  { key: 'cook',     emoji: '🍳', tone: 'green'  },
-  { key: 'other',    emoji: '✨', tone: 'slate'  },
+  { key: 'move',     Icon: Sofa,             tone: 'orange' },
+  { key: 'clean',    Icon: Sparkles,         tone: 'teal'   },
+  { key: 'plumb',    Icon: Droplets,         tone: 'blue'   },
+  { key: 'electric', Icon: Zap,              tone: 'amber'  },
+  { key: 'cab',      Icon: Car,              tone: 'violet' },
+  { key: 'auto',     Icon: Bike,             tone: 'amber'  },
+  { key: 'puncture', Icon: CircleDot,        tone: 'slate'  },
+  { key: 'mechanic', Icon: Wrench,           tone: 'rose'   },
+  { key: 'cook',     Icon: Utensils,         tone: 'green'  },
+  { key: 'other',    Icon: MoreHorizontal,   tone: 'slate'  },
 ];
 
 export function metaOf(key: string): CategoryMeta {

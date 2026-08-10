@@ -2,62 +2,90 @@
 
 /*
  * ---------------------------------------------------------------------------
- * DailyGig — theme tokens
+ * DailyGig — modern theme (Instagram/Facebook flavour)
  * ---------------------------------------------------------------------------
- * Two palettes (light + dark) exposed as CSS variables. Tailwind v4 picks
- * these up as colour tokens (bg-bg, bg-surface, text-text, ...).  We flip
- * the palette by setting `data-theme="dark"` on <html>.
- *
- * Accessibility notes:
- * - Base font is 17px (bigger than the usual 16) so labels are easy for
- *   older users to read.
- * - Body colour contrast passes WCAG AA in both themes.
- * - The colourful "intent" hues (blue/green/amber/rose/violet/teal) stay
- *   perceptually similar across themes so an icon someone learned as
- *   "green = go" stays green.
+ * Design language:
+ *   - Neutral off-white bg with subtle gradient wash (like IG feed).
+ *   - Cards use pure white with soft, layered shadows (no thick borders).
+ *   - Rounded-2xl to rounded-3xl corners everywhere.
+ *   - Primary uses a warm indigo → violet gradient (echoes IG's stories ring).
+ *   - Dark mode is a true near-black (#0a0a0f) with warmer surfaces.
+ *   - Base font 16 px for density, but line-height generous.
+ *   - Every interactive surface animates a subtle scale + shadow lift.
  */
 @theme {
-  --color-bg:        #f6f7fb;
-  --color-surface:   #ffffff;
-  --color-surface-2: #f1f3f8;
-  --color-border:    #e5e7eb;
-  --color-text:      #0f172a;
-  --color-muted:     #64748b;
-  --color-primary:   #2563eb;
-  --color-primary-fg:#ffffff;
+  --color-bg:         #fafafa;
+  --color-bg-2:       #f4f4f6;
+  --color-surface:    #ffffff;
+  --color-surface-2: #f6f7fb;
+  --color-border:     #ececef;
+  --color-hairline:   rgba(0,0,0,0.06);
+  --color-text:       #0f172a;
+  --color-muted:      #6b7280;
+  --color-primary:    #6d28d9;   /* deep violet */
+  --color-primary-fg: #ffffff;
+  --color-accent:     #ec4899;   /* pink accent to pair with violet */
 
-  /* Intent palette — used by CategoryTile / BigButton */
   --color-good:    #16a34a;
   --color-warn:    #f59e0b;
   --color-bad:     #ef4444;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-               Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  /* Signature app gradient — used on primary buttons, brand logo, splash. */
+  --grad-brand:   linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #f97316 100%);
+  --grad-brand-2: linear-gradient(135deg, #6d28d9 0%, #db2777 100%);
+  --grad-good:    linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  --grad-bad:     linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  --grad-cool:    linear-gradient(180deg, #eef2ff 0%, #fdf4ff 100%);
+  --grad-warm:    linear-gradient(180deg, #fff7ed 0%, #fef2f2 100%);
+
+  --shadow-card:      0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-elevated:  0 4px 8px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.08);
+  --shadow-brand:     0 6px 24px -6px rgba(139, 92, 246, 0.55);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", "Inter", sans-serif;
 }
 
 /* Dark palette — activated by <html data-theme="dark"> */
 :root[data-theme="dark"] {
-  --color-bg:        #0b1220;
-  --color-surface:   #131a2b;
-  --color-surface-2: #1a2338;
-  --color-border:    #253048;
-  --color-text:      #f1f5f9;
-  --color-muted:     #94a3b8;
-  --color-primary:   #60a5fa;
-  --color-primary-fg:#0b1220;
+  --color-bg:         #0a0a0f;
+  --color-bg-2:       #101017;
+  --color-surface:    #17171f;
+  --color-surface-2:  #1e1e28;
+  --color-border:     #26262f;
+  --color-hairline:   rgba(255,255,255,0.06);
+  --color-text:       #f5f5f7;
+  --color-muted:      #9ca3af;
+  --color-primary:    #a78bfa;
+  --color-primary-fg: #0a0a0f;
+  --color-accent:     #f472b6;
+
+  --grad-cool:  linear-gradient(180deg, #1a1030 0%, #2a0f1f 100%);
+  --grad-warm:  linear-gradient(180deg, #2a1610 0%, #2a1020 100%);
+
+  --shadow-card:     0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-elevated: 0 4px 8px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.5);
+  --shadow-brand:    0 6px 24px -6px rgba(167, 139, 250, 0.6);
 }
 
-/* Respect the OS if the user has never picked a theme in-app. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --color-bg:        #0b1220;
-    --color-surface:   #131a2b;
-    --color-surface-2: #1a2338;
-    --color-border:    #253048;
-    --color-text:      #f1f5f9;
-    --color-muted:     #94a3b8;
-    --color-primary:   #60a5fa;
-    --color-primary-fg:#0b1220;
+    --color-bg:         #0a0a0f;
+    --color-bg-2:       #101017;
+    --color-surface:    #17171f;
+    --color-surface-2:  #1e1e28;
+    --color-border:     #26262f;
+    --color-hairline:   rgba(255,255,255,0.06);
+    --color-text:       #f5f5f7;
+    --color-muted:      #9ca3af;
+    --color-primary:    #a78bfa;
+    --color-primary-fg: #0a0a0f;
+    --color-accent:     #f472b6;
+    --grad-cool:  linear-gradient(180deg, #1a1030 0%, #2a0f1f 100%);
+    --grad-warm:  linear-gradient(180deg, #2a1610 0%, #2a1020 100%);
+    --shadow-card:     0 1px 2px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-elevated: 0 4px 8px rgba(0,0,0,0.5), 0 12px 32px rgba(0,0,0,0.5);
+    --shadow-brand:    0 6px 24px -6px rgba(167, 139, 250, 0.6);
   }
 }
 
@@ -68,26 +96,32 @@
   :root {
     color-scheme: light dark;
     font-family: var(--font-sans);
-    font-size: 17px;                 /* elderly-friendly baseline */
+    font-size: 16px;
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
   }
-
-  html, body, #app {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    background: var(--color-bg);
+  html, body, #app { margin: 0; padding: 0; height: 100%; }
+  html { background: var(--color-bg); color: var(--color-text); }
+  body {
+    position: fixed; inset: 0; overflow: hidden;
+    /* Subtle radial wash — the "modern app" background. */
+    background:
+      radial-gradient(1200px 500px at 100% -10%, rgba(236, 72, 153, 0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 0%,   rgba(139, 92, 246, 0.10), transparent 60%),
+      var(--color-bg);
     color: var(--color-text);
-    overscroll-behavior-y: contain;
     transition: background-color 200ms ease, color 200ms ease;
   }
-
-  body {
-    position: fixed;
-    inset: 0;
-    overflow: hidden;
+  :root[data-theme="dark"] body,
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) body {
+      background:
+        radial-gradient(1200px 500px at 100% -10%, rgba(236, 72, 153, 0.10), transparent 60%),
+        radial-gradient(900px 500px at -10% 0%,   rgba(139, 92, 246, 0.14), transparent 60%),
+        var(--color-bg);
+    }
   }
 
   #app {
@@ -102,11 +136,10 @@
     color: inherit;
   }
 
-  /* Bigger default focus ring for keyboard/switch-control users. */
   :focus-visible {
-    outline: 3px solid var(--color-primary);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
-    border-radius: 10px;
+    border-radius: 12px;
   }
 
   ::-webkit-scrollbar { width: 0; height: 0; }
@@ -118,35 +151,80 @@
 @layer utilities {
   .pt-safe-top    { padding-top: env(safe-area-inset-top); }
   .pb-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
-  .pb-tabbar      { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .pb-tabbar      { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
 
-  /* Every tappable surface gets this. Gives snappy visual feedback on
-   * touch without needing a JS ripple. */
+  /* Press feedback — snappy scale + shadow lift. */
   .press {
-    transition: transform 90ms ease, box-shadow 120ms ease,
-                background-color 120ms ease, opacity 120ms ease;
+    transition: transform 120ms cubic-bezier(0.2,0.8,0.2,1),
+                box-shadow 160ms ease,
+                background-color 160ms ease,
+                opacity 160ms ease,
+                filter 160ms ease;
+    will-change: transform;
   }
-  .press:active {
-    transform: scale(0.96);
-    opacity: 0.9;
+  .press:active { transform: scale(0.97); filter: brightness(0.97); }
+
+  /* Gradient helpers. */
+  .bg-grad-brand    { background-image: var(--grad-brand); }
+  .bg-grad-brand-2  { background-image: var(--grad-brand-2); }
+  .bg-grad-good     { background-image: var(--grad-good); }
+  .bg-grad-bad      { background-image: var(--grad-bad); }
+  .bg-grad-cool     { background-image: var(--grad-cool); }
+  .bg-grad-warm     { background-image: var(--grad-warm); }
+
+  /* Text gradient (for the brand wordmark). */
+  .text-grad-brand {
+    background-image: var(--grad-brand-2);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
-  /* Colour helpers used by tiles — keeps hue meanings consistent. */
-  .tint-blue    { background: #dbeafe; color: #1d4ed8; }
-  .tint-green   { background: #dcfce7; color: #15803d; }
-  .tint-amber   { background: #fef3c7; color: #b45309; }
-  .tint-rose    { background: #ffe4e6; color: #be123c; }
-  .tint-violet  { background: #ede9fe; color: #6d28d9; }
-  .tint-teal    { background: #ccfbf1; color: #0f766e; }
-  .tint-orange  { background: #ffedd5; color: #c2410c; }
-  .tint-slate   { background: #e2e8f0; color: #334155; }
+  /* Reusable card look. Cards no longer need thick borders. */
+  .card {
+    background: var(--color-surface);
+    border-radius: 20px;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-hairline);
+  }
+  .card-elevated {
+    background: var(--color-surface);
+    border-radius: 24px;
+    box-shadow: var(--shadow-elevated);
+    border: 1px solid var(--color-hairline);
+  }
 
-  :root[data-theme="dark"] .tint-blue    { background: #1e3a8a; color: #bfdbfe; }
-  :root[data-theme="dark"] .tint-green   { background: #14532d; color: #bbf7d0; }
-  :root[data-theme="dark"] .tint-amber   { background: #78350f; color: #fde68a; }
-  :root[data-theme="dark"] .tint-rose    { background: #881337; color: #fecdd3; }
-  :root[data-theme="dark"] .tint-violet  { background: #4c1d95; color: #ddd6fe; }
-  :root[data-theme="dark"] .tint-teal    { background: #134e4a; color: #99f6e4; }
-  :root[data-theme="dark"] .tint-orange  { background: #7c2d12; color: #fed7aa; }
-  :root[data-theme="dark"] .tint-slate   { background: #334155; color: #e2e8f0; }
+  /* Segmented control (used for filter chips etc.) */
+  .segmented {
+    background: var(--color-surface-2);
+    border-radius: 999px;
+    padding: 4px;
+  }
+
+  /* Ring around an "unread"/"active" avatar (IG stories style). */
+  .ring-brand {
+    background: var(--grad-brand);
+    padding: 2px;
+    border-radius: 9999px;
+  }
+
+  /* Colourful category tints — used for tile backgrounds. Kept
+   * as soft pastels in both themes for legibility. */
+  .tint-blue    { background: linear-gradient(135deg, #dbeafe, #eff6ff); color: #1d4ed8; }
+  .tint-green   { background: linear-gradient(135deg, #dcfce7, #f0fdf4); color: #15803d; }
+  .tint-amber   { background: linear-gradient(135deg, #fef3c7, #fffbeb); color: #b45309; }
+  .tint-rose    { background: linear-gradient(135deg, #ffe4e6, #fff1f2); color: #be123c; }
+  .tint-violet  { background: linear-gradient(135deg, #ede9fe, #f5f3ff); color: #6d28d9; }
+  .tint-teal    { background: linear-gradient(135deg, #ccfbf1, #f0fdfa); color: #0f766e; }
+  .tint-orange  { background: linear-gradient(135deg, #ffedd5, #fff7ed); color: #c2410c; }
+  .tint-slate   { background: linear-gradient(135deg, #e2e8f0, #f8fafc); color: #334155; }
+
+  :root[data-theme="dark"] .tint-blue    { background: linear-gradient(135deg,#1e3a8a,#0f1e4b); color:#bfdbfe; }
+  :root[data-theme="dark"] .tint-green   { background: linear-gradient(135deg,#14532d,#052e16); color:#bbf7d0; }
+  :root[data-theme="dark"] .tint-amber   { background: linear-gradient(135deg,#78350f,#3f1f05); color:#fde68a; }
+  :root[data-theme="dark"] .tint-rose    { background: linear-gradient(135deg,#881337,#4c0519); color:#fecdd3; }
+  :root[data-theme="dark"] .tint-violet  { background: linear-gradient(135deg,#4c1d95,#2e1065); color:#ddd6fe; }
+  :root[data-theme="dark"] .tint-teal    { background: linear-gradient(135deg,#134e4a,#042f2e); color:#99f6e4; }
+  :root[data-theme="dark"] .tint-orange  { background: linear-gradient(135deg,#7c2d12,#431407); color:#fed7aa; }
+  :root[data-theme="dark"] .tint-slate   { background: linear-gradient(135deg,#334155,#1e293b); color:#e2e8f0; }
 }

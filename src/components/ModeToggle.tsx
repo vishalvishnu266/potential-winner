@@ -1,3 +1,4 @@
+import { HandHelping, Hammer } from 'lucide-react';
 import { hapticTap } from '../composables/useNative';
 import { useT } from '../i18n';
 
@@ -9,27 +10,28 @@ export interface ModeToggleProps {
 }
 
 /**
- * Big two-way switch at the top of the home screen that flips the whole
- * app between "I need help" and "I want work".
+ * Instagram-style segmented control on a rounded pill background.
+ * The active option has a solid white pill sliding underneath.
  */
 export default function ModeToggle({ value, onChange }: ModeToggleProps) {
   const t = useT();
-  const opt = (m: AppMode, label: string, emoji: string, tone: string) => {
+
+  const Item = ({
+    m, label, Icon,
+  }: { m: AppMode; label: string; Icon: typeof HandHelping }) => {
     const active = value === m;
     return (
       <button
         role="tab"
         aria-selected={active}
         onClick={() => { hapticTap(); onChange(m); }}
-        className={[
-          'press flex-1 flex items-center justify-center gap-2 rounded-2xl',
-          'py-4 text-base font-bold',
-          active
-            ? `${tone} shadow-md`
-            : 'bg-transparent text-muted',
-        ].join(' ')}
+        className={
+          'press relative z-10 flex flex-1 items-center justify-center gap-2 rounded-full ' +
+          'py-2.5 text-sm font-semibold transition-colors ' +
+          (active ? 'text-text' : 'text-muted')
+        }
       >
-        <span className="text-2xl leading-none" aria-hidden>{emoji}</span>
+        <Icon size={18} strokeWidth={2.2} aria-hidden />
         <span>{label}</span>
       </button>
     );
@@ -38,10 +40,19 @@ export default function ModeToggle({ value, onChange }: ModeToggleProps) {
   return (
     <div
       role="tablist"
-      className="flex gap-1 rounded-2xl border border-border bg-[var(--color-surface-2)] p-1"
+      className="segmented relative flex items-center"
     >
-      {opt('help', t.modeToggle.findHelp, '🙋', 'tint-blue')}
-      {opt('work', t.modeToggle.findWork, '🛠️', 'tint-green')}
+      {/* Sliding pill (indicates active tab) */}
+      <span
+        aria-hidden
+        className={
+          'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-[var(--color-surface)] shadow-[var(--shadow-card)] ' +
+          'transition-transform duration-300 ease-[cubic-bezier(0.2,0.8,0.2,1)] ' +
+          (value === 'help' ? 'translate-x-1' : 'translate-x-[calc(100%+3px)]')
+        }
+      />
+      <Item m="help" label={t.modeToggle.findHelp} Icon={HandHelping} />
+      <Item m="work" label={t.modeToggle.findWork} Icon={Hammer} />
     </div>
   );
 }

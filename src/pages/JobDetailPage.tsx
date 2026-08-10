@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+  ArrowLeft, Check, Circle, CircleCheck, Compass, Flag,
+  HandCoins, Handshake, Map as MapIcon, Smile, Meh, Frown,
+} from 'lucide-react';
 import BigButton from '../components/BigButton';
 import { api, Job } from '../data/api';
 import { metaOf, labelOf } from '../data/categories';
@@ -9,10 +13,6 @@ import { useT } from '../i18n';
 
 const POLL_MS = 10_000;
 
-/**
- * The "live job" screen used by both the requester and the doer.
- * The UI branches based on the user's role in the job.
- */
 export default function JobDetailPage() {
     const { id = '' } = useParams();
     const nav = useNavigate();
@@ -33,8 +33,8 @@ export default function JobDetailPage() {
         return () => clearInterval(tm);
     }, [load]);
 
-    if (err) return <Wrap><div className="mx-5 mt-6 text-[var(--color-bad)]">{err}</div></Wrap>;
-    if (!job) return <Wrap><div className="mx-5 mt-6 text-muted">{t.common.loading}</div></Wrap>;
+    if (err) return <Wrap><div className="mx-4 mt-6 text-[var(--color-bad)]">{err}</div></Wrap>;
+    if (!job) return <Wrap><div className="mx-4 mt-6 text-muted">{t.common.loading}</div></Wrap>;
 
     const meta = metaOf(job.category);
     const catLabel = labelOf(t.category, job.category);
@@ -72,68 +72,76 @@ export default function JobDetailPage() {
 
     return (
         <Wrap>
-            <header className="pt-safe-top flex items-center gap-2 px-4 pb-2 pt-4">
+            <header className="pt-safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-[var(--color-hairline)] bg-[color:color-mix(in_srgb,var(--color-bg)_90%,transparent)] px-3 py-3 backdrop-blur-md">
                 <button
                     onClick={() => nav(-1)} aria-label={t.common.back}
-                    className="press flex h-10 w-10 items-center justify-center rounded-full border border-border bg-[var(--color-surface)] text-xl"
-                >←</button>
-                <h1 className="text-xl font-extrabold">{t.job.title}</h1>
+                    className="press flex h-10 w-10 items-center justify-center rounded-full hover:bg-[var(--color-surface-2)]"
+                ><ArrowLeft size={22} /></button>
+                <h1 className="text-lg font-bold">{t.job.title}</h1>
             </header>
 
-            <div className="mx-5 mt-2 flex items-center gap-3 rounded-2xl border border-border bg-[var(--color-surface)] p-3">
-                <div className={`flex h-16 w-16 items-center justify-center rounded-2xl text-4xl tint-${meta.tone}`}>
-                    {meta.emoji}
+            {/* Job hero */}
+            <div className="mx-4 mt-3 card p-4">
+                <div className="flex items-center gap-3">
+                    <div className={`flex h-16 w-16 items-center justify-center rounded-2xl tint-${meta.tone}`}>
+                        <meta.Icon size={30} strokeWidth={2.2} />
+                    </div>
+                    <div className="flex-1">
+                        <div className="text-base font-bold">{job.description || catLabel}</div>
+                        <div className="mt-0.5 text-xs text-muted">{catLabel}</div>
+                    </div>
+                    {job.budget != null && <div className="text-2xl font-extrabold text-grad-brand">₹{job.budget}</div>}
                 </div>
-                <div className="flex-1">
-                    <div className="text-base font-bold">{job.description || catLabel}</div>
-                    <div className="mt-0.5 text-xs text-muted">{catLabel}</div>
-                </div>
-                {job.budget != null && <div className="text-2xl font-extrabold">₹{job.budget}</div>}
             </div>
 
-            <div className="mx-5 mt-3 grid grid-cols-2 gap-2">
+            {/* Map shortcuts */}
+            <div className="mx-4 mt-3 grid grid-cols-2 gap-2">
                 <button
                     onClick={() => openInMaps({ lat: job.lat, lon: job.lon, label: job.description || catLabel })}
-                    className="press flex items-center justify-center gap-2 rounded-2xl border border-border bg-[var(--color-surface)] py-3 text-sm font-semibold"
+                    className="press card flex items-center justify-center gap-2 py-3 text-sm font-semibold"
                 >
-                    <span className="text-xl">🗺️</span> {t.job.viewOnMap}
+                    <MapIcon size={18} className="text-primary" /> {t.job.viewOnMap}
                 </button>
                 <button
                     onClick={() => openDirections({ lat: job.lat, lon: job.lon })}
-                    className="press flex items-center justify-center gap-2 rounded-2xl border border-border bg-[var(--color-surface)] py-3 text-sm font-semibold"
+                    className="press card flex items-center justify-center gap-2 py-3 text-sm font-semibold"
                 >
-                    <span className="text-xl">🧭</span> {t.job.directions}
+                    <Compass size={18} className="text-primary" /> {t.job.directions}
                 </button>
             </div>
 
-            <div className="mx-5 mt-3 rounded-2xl border border-border bg-[var(--color-surface)] p-3">
-                <div className="mb-2 text-xs font-semibold uppercase text-muted">{t.job.progress}</div>
-                <StatusRow ok={job.accepted_by != null} label={t.job.acceptedByHelper} />
-                <StatusRow ok={job.requester_done}       label={t.job.requesterMarkedDone} />
-                <StatusRow ok={job.doer_done}            label={t.job.helperMarkedDone} />
-                <StatusRow ok={job.requester_paid}       label={t.job.requesterPaid} />
-                <StatusRow ok={job.doer_received}        label={t.job.helperReceived} />
+            {/* Progress */}
+            <div className="mx-4 mt-3 card p-3">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {t.job.progress}
+                </div>
+                <Step ok={job.accepted_by != null} label={t.job.acceptedByHelper} />
+                <Step ok={job.requester_done}     label={t.job.requesterMarkedDone} />
+                <Step ok={job.doer_done}          label={t.job.helperMarkedDone} />
+                <Step ok={job.requester_paid}     label={t.job.requesterPaid} />
+                <Step ok={job.doer_received}      label={t.job.helperReceived} />
             </div>
 
-            <div className="mx-5 mt-4 space-y-3">
+            {/* Actions */}
+            <div className="mx-4 mt-4 space-y-3">
                 {!job.accepted_by && !iAmRequester && (
-                    <BigButton tone="good" icon="✅" disabled={busy} onClick={accept}>
+                    <BigButton tone="primary" icon={<Handshake size={20} />} disabled={busy} onClick={accept}>
                         {t.job.acceptThisJob}
                     </BigButton>
                 )}
                 {job.accepted_by && !iAmRequester && !iAmDoer && (
-                    <div className="rounded-2xl border border-dashed border-border p-4 text-center text-sm text-muted">
+                    <div className="card p-4 text-center text-sm text-muted">
                         {t.job.alreadyAccepted}
                     </div>
                 )}
 
                 {iAmRequester && !job.requester_done && job.accepted_by && (
-                    <BigButton tone="primary" icon="🏁" disabled={busy} onClick={() => done('requester')}>
+                    <BigButton tone="primary" icon={<Flag size={20} />} disabled={busy} onClick={() => done('requester')}>
                         {t.job.markAsDone}
                     </BigButton>
                 )}
                 {iAmDoer && !job.doer_done && (
-                    <BigButton tone="primary" icon="🏁" disabled={busy} onClick={() => done('doer')}>
+                    <BigButton tone="primary" icon={<Flag size={20} />} disabled={busy} onClick={() => done('doer')}>
                         {t.job.iFinished}
                     </BigButton>
                 )}
@@ -142,18 +150,18 @@ export default function JobDetailPage() {
                  !(job.requester_paid && job.doer_received) && (
                     <>
                         {iAmRequester && !job.requester_paid && (
-                            <BigButton tone="warn" icon="💸" disabled={busy}
+                            <BigButton tone="good" icon={<HandCoins size={20} />} disabled={busy}
                                        onClick={() => confirmPayment('requester')}>
                                 {t.job.iPaidUpi}
                             </BigButton>
                         )}
                         {iAmDoer && !job.doer_received && (
-                            <BigButton tone="warn" icon="💰" disabled={busy}
+                            <BigButton tone="good" icon={<Check size={20} />} disabled={busy}
                                        onClick={() => confirmPayment('doer')}>
                                 {t.job.iReceivedPayment}
                             </BigButton>
                         )}
-                        <div className="rounded-2xl border border-dashed border-border p-3 text-center text-xs text-muted">
+                        <div className="card p-3 text-center text-xs text-muted">
                             {t.job.payHint}
                         </div>
                     </>
@@ -161,12 +169,12 @@ export default function JobDetailPage() {
 
                 {job.requester_done && job.doer_done &&
                  job.requester_paid && job.doer_received && (iAmRequester || iAmDoer) && (
-                    <div className="rounded-2xl border border-border bg-[var(--color-surface)] p-3 text-center">
-                        <div className="mb-2 text-sm font-semibold">{t.job.howWasIt}</div>
+                    <div className="card p-4 text-center">
+                        <div className="mb-3 text-sm font-semibold">{t.job.howWasIt}</div>
                         <div className="flex justify-around">
-                            <RateBtn emoji="😞" onClick={() => rate(1)} />
-                            <RateBtn emoji="😐" onClick={() => rate(2)} />
-                            <RateBtn emoji="😊" onClick={() => rate(3)} />
+                            <RateBtn tone="rose"  onClick={() => rate(1)}><Frown size={28} /></RateBtn>
+                            <RateBtn tone="amber" onClick={() => rate(2)}><Meh   size={28} /></RateBtn>
+                            <RateBtn tone="green" onClick={() => rate(3)}><Smile size={28} /></RateBtn>
                         </div>
                     </div>
                 )}
@@ -177,23 +185,24 @@ export default function JobDetailPage() {
     );
 }
 
-function StatusRow({ ok, label }: { ok: boolean; label: string }) {
+function Step({ ok, label }: { ok: boolean; label: string }) {
     return (
         <div className="flex items-center gap-2 py-1">
-            <span className={ok ? 'text-[var(--color-good)]' : 'text-muted'}>
-                {ok ? '✅' : '⚪'}
-            </span>
-            <span className={ok ? 'font-semibold' : 'text-muted'}>{label}</span>
+            {ok
+                ? <CircleCheck size={18} className="text-[var(--color-good)]" />
+                : <Circle      size={18} className="text-muted" />}
+            <span className={ok ? 'text-sm font-semibold' : 'text-sm text-muted'}>{label}</span>
         </div>
     );
 }
-function RateBtn({ emoji, onClick }: { emoji: string; onClick: () => void }) {
+function RateBtn({ tone, children, onClick }: {
+    tone: 'rose' | 'amber' | 'green'; children: React.ReactNode; onClick: () => void;
+}) {
     return (
         <button
             onClick={onClick}
-            className="press flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-[var(--color-surface-2)] text-4xl"
-            aria-label={`Rate ${emoji}`}
-        >{emoji}</button>
+            className={`press flex h-16 w-16 items-center justify-center rounded-2xl tint-${tone}`}
+        >{children}</button>
     );
 }
 function Wrap({ children }: { children: React.ReactNode }) {

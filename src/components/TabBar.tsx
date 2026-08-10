@@ -1,15 +1,17 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Home, Search, PlusSquare, User, Settings, type LucideIcon } from 'lucide-react';
 import { hapticTap } from '../composables/useNative';
 import { getTabForPath } from '../router';
 import { useT } from '../i18n';
 
-type Tab = { name: string; label: string; path: string; emoji: string };
+type Tab = { name: string; label: string; path: string; Icon: LucideIcon };
 
 /**
- * Bottom navigation.  Uses emojis (universally recognised, works in any
- * language, no SVG asset pipeline).  Big enough touch targets (56 px
- * tall) for elderly users; the active tab is highlighted with a coloured
- * pill background instead of just a colour change.
+ * Instagram-style bottom navigation.
+ * - Sits above a hairline separator with a slight backdrop blur.
+ * - Only the active icon fills (using the brand gradient); others are
+ *   thin outlines — matches IG / Threads visual language.
+ * - Middle "Post" tab is emphasised with a filled pill.
  */
 export default function TabBar() {
   const location = useLocation();
@@ -18,11 +20,11 @@ export default function TabBar() {
   const t = useT();
 
   const tabs: Tab[] = [
-    { name: 'home',     label: t.tab.home, path: '/',         emoji: '🏠' },
-    { name: 'work',     label: t.tab.work, path: '/work',     emoji: '🛠️' },
-    { name: 'post',     label: t.tab.post, path: '/post',     emoji: '➕' },
-    { name: 'me',       label: t.tab.me,   path: '/me',       emoji: '👤' },
-    { name: 'settings', label: t.tab.more, path: '/settings', emoji: '⚙️' },
+    { name: 'home',     label: t.tab.home, path: '/',         Icon: Home },
+    { name: 'work',     label: t.tab.work, path: '/work',     Icon: Search },
+    { name: 'post',     label: t.tab.post, path: '/post',     Icon: PlusSquare },
+    { name: 'me',       label: t.tab.me,   path: '/me',       Icon: User },
+    { name: 'settings', label: t.tab.more, path: '/settings', Icon: Settings },
   ];
 
   const go = (tab: Tab) => {
@@ -32,12 +34,41 @@ export default function TabBar() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-[100] flex items-stretch justify-around border-t border-border bg-[var(--color-surface)] pb-safe-bottom shadow-[0_-2px_16px_rgba(0,0,0,0.06)]"
-      role="tablist"
       aria-label="Main navigation"
+      className={
+        'fixed inset-x-0 bottom-0 z-[100] flex items-stretch justify-around ' +
+        'pb-safe-bottom border-t border-[var(--color-hairline)] ' +
+        'bg-[color:color-mix(in_srgb,var(--color-surface)_90%,transparent)] ' +
+        'backdrop-blur-lg'
+      }
     >
       {tabs.map((tab) => {
-        const active = current === tab.name;
+        const active   = current === tab.name;
+        const emphasis = tab.name === 'post';
+        const { Icon } = tab;
+
+        // The "post" tab always gets the brand gradient — it's the primary
+        // action of the app, IG does the same treatment.
+        if (emphasis) {
+          return (
+            <button
+              key={tab.name}
+              role="tab"
+              aria-selected={active}
+              aria-label={tab.label}
+              onClick={() => go(tab)}
+              className="press flex min-h-14 flex-1 items-center justify-center py-2"
+            >
+              <span className={
+                'inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-grad-brand ' +
+                'text-white shadow-[var(--shadow-brand)]'
+              }>
+                <Icon size={22} strokeWidth={2.4} />
+              </span>
+            </button>
+          );
+        }
+
         return (
           <button
             key={tab.name}
@@ -47,18 +78,18 @@ export default function TabBar() {
             onClick={() => go(tab)}
             className="press flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 py-2"
           >
-            <span
-              className={
-                'inline-flex h-9 w-14 items-center justify-center rounded-full text-xl transition-colors ' +
-                (active ? 'bg-primary text-[var(--color-primary-fg)]' : 'text-muted')
-              }
+            <Icon
+              size={24}
+              strokeWidth={active ? 2.6 : 1.8}
+              fill={active ? 'currentColor' : 'none'}
+              className={active ? 'text-text' : 'text-muted'}
               aria-hidden
-            >
-              {tab.emoji}
-            </span>
+            />
             <span className={
-              'text-[11px] font-semibold ' + (active ? 'text-primary' : 'text-muted')
-            }>{tab.label}</span>
+              'text-[10px] font-semibold ' + (active ? 'text-text' : 'text-muted')
+            }>
+              {tab.label}
+            </span>
           </button>
         );
       })}

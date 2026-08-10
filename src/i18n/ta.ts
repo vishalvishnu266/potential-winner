@@ -101,6 +101,7 @@ const ta: Messages = {
 
     me: {
         title: 'நான்',
+        settings: 'அமைப்புகள்',
         notSignedIn: 'உள்நுழையவில்லை',
         signInHint: 'வேலை பதிவு செய்ய / ஏற்க உள்நுழையவும்',
         phone: 'தொலைபேசி எண்',

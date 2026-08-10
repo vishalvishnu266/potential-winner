@@ -142,16 +142,21 @@ export default function Radar({
                 const y = cy + Math.sin(angle) * (R * rel);
                 const dotR = 14 * dpr;
 
+                // Coloured dot — the tone alone conveys the category once
+                // users learn the palette (violet = cab, teal = clean, ...).
+                // A single-glyph icon would be hard to render legibly at
+                // this size on canvas across scripts and screen densities.
                 const meta: CategoryMeta = metaOf(p.category);
                 const fill = colorForTone(meta.tone);
+
+                // Outer soft halo
+                ctx.fillStyle = hexA(fill.bg, 0.25);
+                ctx.beginPath(); ctx.arc(x, y, dotR + 6 * dpr, 0, Math.PI * 2); ctx.fill();
+
+                // Core dot with white outline
                 ctx.fillStyle = fill.bg;
                 ctx.beginPath(); ctx.arc(x, y, dotR, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = surface; ctx.lineWidth = 2 * dpr; ctx.stroke();
-                ctx.fillStyle = fill.fg;
-                ctx.font = `${14 * dpr}px system-ui, sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(meta.emoji, x, y + 1 * dpr);
+                ctx.strokeStyle = surface; ctx.lineWidth = 3 * dpr; ctx.stroke();
 
                 posRef.current.push({
                     id: p.id, p,

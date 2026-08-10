@@ -1,45 +1,57 @@
-import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react';
 import { hapticTap } from '../composables/useNative';
 
 export type BigButtonTone =
-  | 'primary' | 'good' | 'warn' | 'bad'
-  | 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'teal' | 'orange' | 'slate';
+  | 'primary'    // gradient (violet → pink) — the app's signature CTA
+  | 'good'       // green gradient
+  | 'warn'       // amber
+  | 'bad'        // red gradient
+  | 'ghost'      // subtle, on-surface
+  | 'outline';   // hairline border
 
 export interface BigButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tone?: BigButtonTone;
+  size?: 'md' | 'lg';
   fullWidth?: boolean;
-  /** Emoji or SVG string shown to the left of the label. */
-  icon?: React.ReactNode;
+  /** Icon element — usually a lucide icon. Rendered before the label. */
+  icon?: ReactNode;
+  /** Icon element rendered *after* the label (e.g. trailing chevron). */
+  trailing?: ReactNode;
+  loading?: boolean;
 }
 
-const TONE: Record<BigButtonTone, string> = {
-  primary: 'bg-primary text-[var(--color-primary-fg)] border-primary',
-  good:    'bg-[var(--color-good)] text-white border-transparent',
-  warn:    'bg-[var(--color-warn)] text-black border-transparent',
-  bad:     'bg-[var(--color-bad)]  text-white border-transparent',
-  blue:    'tint-blue   border-transparent',
-  green:   'tint-green  border-transparent',
-  amber:   'tint-amber  border-transparent',
-  rose:    'tint-rose   border-transparent',
-  violet:  'tint-violet border-transparent',
-  teal:    'tint-teal   border-transparent',
-  orange:  'tint-orange border-transparent',
-  slate:   'tint-slate  border-transparent',
+const TONES: Record<BigButtonTone, string> = {
+  primary: 'bg-grad-brand text-white shadow-[var(--shadow-brand)] border border-transparent',
+  good:    'bg-grad-good  text-white shadow-md border border-transparent',
+  warn:    'bg-[var(--color-warn)] text-black shadow-md border border-transparent',
+  bad:     'bg-grad-bad   text-white shadow-md border border-transparent',
+  ghost:   'bg-[var(--color-surface-2)] text-text border border-transparent hover:bg-[var(--color-surface)]',
+  outline: 'bg-transparent text-text border border-border',
+};
+
+const SIZES = {
+  md: 'min-h-11 px-4 py-2.5 text-sm rounded-xl',
+  lg: 'min-h-14 px-5 py-3.5 text-base rounded-2xl',
 };
 
 /**
- * Big, high-contrast button meant for the "primary action" on any screen.
- * Minimum height 56 px so it comfortably fits an elderly thumb; a haptic
- * tap fires on every press for tactile feedback.
+ * A modern, opinionated primary button.  Uses gradient fills for tone
+ * variants, soft shadow lift on the primary CTA, and animates on press.
+ * Icons come from lucide-react — pass them as `icon={<Plus size={20} />}`.
  */
 const BigButton = forwardRef<HTMLButtonElement, BigButtonProps>(function BigButton(
-  { tone = 'primary', fullWidth = true, icon, className = '', onClick, children, ...rest },
+  {
+    tone = 'primary', size = 'lg', fullWidth = true,
+    icon, trailing, loading, className = '',
+    onClick, children, disabled, ...rest
+  },
   ref,
 ) {
   const cls = [
-    'press inline-flex items-center justify-center gap-3 rounded-2xl border-2 px-5 py-4',
-    'min-h-14 text-lg font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed',
-    TONE[tone],
+    'press inline-flex items-center justify-center gap-2 font-bold',
+    'disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none',
+    SIZES[size],
+    TONES[tone],
     fullWidth ? 'w-full' : '',
     className,
   ].filter(Boolean).join(' ');
@@ -47,12 +59,18 @@ const BigButton = forwardRef<HTMLButtonElement, BigButtonProps>(function BigButt
   return (
     <button
       ref={ref}
+      disabled={disabled || loading}
       className={cls}
-      onClick={(e) => { hapticTap(); onClick?.(e); }}
+      onClick={(e) => { if (!loading) { hapticTap(); onClick?.(e); } }}
       {...rest}
     >
-      {icon && <span className="text-2xl leading-none">{icon}</span>}
+      {loading ? (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      ) : (
+        icon
+      )}
       <span>{children}</span>
+      {trailing}
     </button>
   );
 });

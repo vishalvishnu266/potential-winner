@@ -97,6 +97,7 @@ const en: Messages = {
 
     me: {
         title: 'Me',
+        settings: 'Settings',
         notSignedIn: 'Not signed in',
         signInHint: 'Sign in to post & accept jobs',
         phone: 'Phone number',
