@@ -1,21 +1,24 @@
 /**
  * Domain rows — the app's real primary content items.
- * These are the reusable "job row", "provider row" etc. that were previously
- * inlined in every list.
+ * Every row shows a BearingArrow so users still know direction without a
+ * radar view. Cheap: one SVG per row, one CSS transform on heading change.
  */
 
 import { El, UIComponent } from '../framework';
 import { Icon } from '../framework/icons';
 import { IconTile } from './lists';
+import { BearingArrow } from './bearingArrow';
 import { ActionRow } from '../components/ActionRow';
 import { haptics } from '../services';
+import { appStore } from '../state';
 import { formatAgo, MockJob } from '../data/mock';
+import { bearingDeg, compassLetter } from '../data/bearing';
 import type { Provider } from '../services';
 import { metaOf } from '../data/categories';
 import { i18n } from '../i18n';
 
 // ---------------------------------------------------------------------------
-// JobListRow — used in FindWork list + Home preview
+// JobListRow
 // ---------------------------------------------------------------------------
 
 export interface JobListRowProps {
@@ -27,6 +30,9 @@ export function JobListRow(p: JobListRowProps): UIComponent<'button'> {
   const t = i18n.t;
   const meta = metaOf(p.job.category);
   const label = (t.category as Record<string, string>)[p.job.category] ?? p.job.category;
+  const me = appStore.state.location.coord;
+  const bearing = bearingDeg(me.lat, me.lon, p.job.lat, p.job.lon);
+  const dir = compassLetter(bearing);
 
   return El('button').cls('job-row').onClick(() => {
     void haptics.light();
@@ -35,7 +41,12 @@ export function JobListRow(p: JobListRowProps): UIComponent<'button'> {
     IconTile({ icon: meta.icon, tone: meta.tone }),
     El('div').cls('job-body').add(
       El('div').cls('job-title truncate').text(p.job.description),
-      El('div').cls('job-meta truncate').text(`${label} · ${p.job.distanceKm.toFixed(1)} km · ${formatAgo(p.job.postedAt)}`),
+      El('div').cls('row').style({ gap: '6px' }).add(
+        BearingArrow({ bearingDeg: bearing, size: 14 }),
+        El('span').cls('job-meta truncate').text(
+          `${dir} · ${p.job.distanceKm.toFixed(1)} km · ${label} · ${formatAgo(p.job.postedAt)}`,
+        ),
+      ),
     ),
     El('div').cls('job-price num').text('₹' + p.job.budget),
     El('span').cls('list-chev').add(Icon('chevron-right', { size: 18 })),
@@ -43,7 +54,7 @@ export function JobListRow(p: JobListRowProps): UIComponent<'button'> {
 }
 
 // ---------------------------------------------------------------------------
-// ProviderListRow — used in FindServices list
+// ProviderListRow
 // ---------------------------------------------------------------------------
 
 export interface ProviderListRowProps {
@@ -55,6 +66,9 @@ export function ProviderListRow(p: ProviderListRowProps): UIComponent<'div'> {
   const t = i18n.t;
   const meta = metaOf(p.provider.category);
   const catLabel = (t.category as Record<string, string>)[p.provider.category] ?? p.provider.category;
+  const me = appStore.state.location.coord;
+  const bearing = bearingDeg(me.lat, me.lon, p.provider.lat, p.provider.lon);
+  const dir = compassLetter(bearing);
 
   const inner = El('div').cls('col').style({ padding: 'var(--sp-3) var(--sp-4)', gap: 'var(--sp-2)' });
   inner.add(
@@ -62,7 +76,12 @@ export function ProviderListRow(p: ProviderListRowProps): UIComponent<'div'> {
       IconTile({ icon: meta.icon, tone: meta.tone }),
       El('div').cls('col grow').style({ gap: '2px' }).add(
         El('div').cls('job-title truncate').text(p.provider.name),
-        El('div').cls('job-meta truncate').text(`${catLabel} · ${p.provider.distanceKm.toFixed(1)} km · ★ ${p.provider.rating.toFixed(1)}`),
+        El('div').cls('row').style({ gap: '6px' }).add(
+          BearingArrow({ bearingDeg: bearing, size: 14 }),
+          El('span').cls('job-meta truncate').text(
+            `${dir} · ${p.provider.distanceKm.toFixed(1)} km · ${catLabel} · ★ ${p.provider.rating.toFixed(1)}`,
+          ),
+        ),
       ),
       El('button').cls('btn plain sm').attr('aria-label', 'Details')
         .add(Icon('chevron-right', { size: 20 }))
@@ -81,7 +100,7 @@ export function ProviderListRow(p: ProviderListRowProps): UIComponent<'div'> {
 }
 
 // ---------------------------------------------------------------------------
-// LocalShopRow — used on /local
+// LocalShopRow — sponsors don't carry coords in mock data, so no bearing.
 // ---------------------------------------------------------------------------
 
 export interface LocalShopRowProps {

@@ -1,25 +1,27 @@
 /**
- * Device heading (compass) — pure DOM, no plugin.
+ * Device heading (compass) — cheap, throttled.
  *
- * Emits 0–360° where 0 = north. Handles:
- *   - Android WebView (`deviceorientationabsolute`, alpha inverted)
- *   - iOS Safari (`webkitCompassHeading`, requires user-gesture permission)
- *   - Desktop/web preview → silent 'unavailable'
+ * Emits at most every `THROTTLE_MS` (default 500ms) and only when the
+ * heading has changed by more than `MIN_DELTA_DEG` (default 3°). This
+ * keeps subscribers cheap even with 60 Hz device sensors.
  *
- * API:
- *   headingService.subscribe(fn)   → () => void
- *   headingService.request()       → 'granted' | 'denied' | 'unavailable'
- *   headingService.permission
+ * Auto-attaches on non-iOS on first subscribe. iOS callers must invoke
+ * `request()` from a user gesture to prompt for permission.
  */
 
 export type HeadingPermission = 'prompt' | 'granted' | 'denied' | 'unavailable';
 
 type Listener = (deg: number) => void;
 
+const THROTTLE_MS = 500;
+const MIN_DELTA_DEG = 3;
+
 class HeadingService {
   permission: HeadingPermission = 'prompt';
   private listeners = new Set<Listener>();
   private smoothed: number | null = null;
+  private lastEmitted: number | null = null;
+  private lastEmitAt = 0;
   private attached = false;
 
   constructor() {
@@ -30,14 +32,9 @@ class HeadingService {
 
   subscribe(fn: Listener): () => void {
     this.listeners.add(fn);
-    // Auto-attach on non-iOS (no permission model).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const D = (globalThis as any).DeviceOrientationEvent;
-    if (
-      this.permission === 'prompt' &&
-      D &&
-      typeof D.requestPermission !== 'function'
-    ) {
+    if (this.permission === 'prompt' && D && typeof D.requestPermission !== 'function') {
       this.attach();
       this.permission = 'granted';
     }
@@ -67,38 +64,49 @@ class HeadingService {
     }
   }
 
-  // ----- internal ---------------------------------------------------------
-  private smooth = (next: number): number => {
-    const prev = this.smoothed;
-    if (prev == null) { this.smoothed = next; return next; }
-    const delta = ((next - prev + 540) % 360) - 180;
-    const out = (prev + delta * 0.2 + 360) % 360;
+  // Exponential smoothing to hide jitter.
+  private smooth(next: number): number {
+    if (this.smoothed == null) { this.smoothed = next; return next; }
+    const delta = ((next - this.smoothed + 540) % 360) - 180;
+    const out = (this.smoothed + delta * 0.25 + 360) % 360;
     this.smoothed = out;
     return out;
-  };
-  private emit = (deg: number): void => { this.listeners.forEach((l) => l(deg)); };
+  }
+
+  private maybeEmit(raw: number): void {
+    const now = performance.now();
+    if (now - this.lastEmitAt < THROTTLE_MS) return;
+    const val = this.smooth(raw);
+    if (this.lastEmitted != null) {
+      const diff = Math.abs(((val - this.lastEmitted + 540) % 360) - 180);
+      if (diff < MIN_DELTA_DEG) return;
+    }
+    this.lastEmitted = val;
+    this.lastEmitAt = now;
+    for (const l of this.listeners) l(val);
+  }
 
   private onAbsolute = (e: DeviceOrientationEvent): void => {
     if (e.alpha == null) return;
-    this.emit(this.smooth((360 - e.alpha) % 360));
+    this.maybeEmit((360 - e.alpha) % 360);
   };
   private onRelative = (e: DeviceOrientationEvent): void => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const wk = (e as any).webkitCompassHeading as number | undefined;
-    if (typeof wk === 'number' && !Number.isNaN(wk)) { this.emit(this.smooth(wk)); return; }
-    if (e.alpha != null) this.emit(this.smooth((360 - e.alpha) % 360));
+    if (typeof wk === 'number' && !Number.isNaN(wk)) { this.maybeEmit(wk); return; }
+    if (e.alpha != null) this.maybeEmit((360 - e.alpha) % 360);
   };
 
   private attach(): void {
     if (this.attached) return;
-    window.addEventListener('deviceorientationabsolute', this.onAbsolute as EventListener, true);
-    window.addEventListener('deviceorientation', this.onRelative, true);
+    window.addEventListener('deviceorientationabsolute', this.onAbsolute as EventListener, { passive: true });
+    window.addEventListener('deviceorientation', this.onRelative, { passive: true });
     this.attached = true;
   }
   private detach(): void {
     if (!this.attached) return;
-    window.removeEventListener('deviceorientationabsolute', this.onAbsolute as EventListener, true);
-    window.removeEventListener('deviceorientation', this.onRelative, true);
+    window.removeEventListener('deviceorientationabsolute', this.onAbsolute as EventListener);
+    window.removeEventListener('deviceorientation', this.onRelative);
     this.attached = false;
   }
 }

@@ -123,20 +123,3 @@ export function FloatingBackButton(): UIComponent<'button'> {
     });
 }
 
-/** Floating bar shown over an immersive view (like radar). */
-export function RadarOverlayBar(opts: { onBack: () => void; trailing?: UIComponent }): UIComponent<'div'> {
-  const bar = El('div').style({
-    position: 'absolute',
-    top: 'var(--safe-t)', left: '0', right: '0',
-    zIndex: '3',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    padding: '10px 12px',
-  });
-  const back = El('button').cls('btn ghost sm').attr('aria-label', 'Back')
-    .style({ background: 'var(--c-surface)', boxShadow: 'var(--sh-1)' })
-    .add(Icon('chevron-left', { size: 22 }))
-    .onClick(() => { void haptics.selection(); opts.onBack(); });
-  bar.add(back);
-  if (opts.trailing) bar.add(opts.trailing);
-  return bar;
-}

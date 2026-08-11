@@ -8,3 +8,4 @@ export * from './cards';
 export * from './domainRows';
 export * from './categoryGrid';
 export * from './sheets';
+export * from './bearingArrow';
