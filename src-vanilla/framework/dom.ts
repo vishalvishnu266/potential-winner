@@ -125,6 +125,46 @@ export class UIComponent<T extends Tag = Tag> {
     return this;
   }
 
+  /**
+   * Run `fn` after the element is inserted into the DOM. Returns the
+   * receiver so it stays chainable. Falls back to a microtask if the
+   * element is already connected.
+   */
+  onMount(fn: (el: ElementOf<T>) => void | (() => void)): this {
+    const run = (): void => {
+      const cleanup = fn(this.el);
+      if (typeof cleanup === 'function') {
+        this._cleanups.push(cleanup);
+      }
+    };
+    if (this.el.isConnected) queueMicrotask(run);
+    else {
+      // Use a MutationObserver on document.body to detect first insertion.
+      const mo = new MutationObserver(() => {
+        if (this.el.isConnected) { mo.disconnect(); run(); }
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+      this._cleanups.push(() => mo.disconnect());
+    }
+    return this;
+  }
+
+  /** Register a cleanup to run when `.dispose()` is invoked. */
+  onUnmount(fn: () => void): this {
+    this._cleanups.push(fn);
+    return this;
+  }
+
+  /** Run all registered cleanups. Idempotent. */
+  dispose(): void {
+    while (this._cleanups.length) {
+      const fn = this._cleanups.pop();
+      try { fn?.(); } catch { /* noop */ }
+    }
+  }
+
+  private _cleanups: Array<() => void> = [];
+
   // -------------------------------------------------------------------------
   // Attributes / classes / styles
   // -------------------------------------------------------------------------
