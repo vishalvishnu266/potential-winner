@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanilla JS MVC SPA - Infinite Scroll & DatePicker Component</title>
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --radius: 8px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body.dark-mode {
+      --bg-primary: #0f172a;
+      --bg-card: #1e293b;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-light: #1e1b4b;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    #root { width: 100%; max-width: 680px; }
+
+    .app-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: calc(var(--radius) * 1.5);
+      padding: 2rem;
+      box-shadow: var(--shadow-md);
+    }
+
+    h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 1.25rem 0; }
+    h2 { font-size: 1.15rem; font-weight: 600; margin: 0 0 1rem 0; }
+    p { line-height: 1.5; margin: 0 0 1rem 0; color: var(--text-muted); }
+    hr { border: none; height: 1px; background-color: var(--border-color); margin: 1.5rem 0; }
+
+    .navbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; }
+    .nav-link {
+      text-decoration: none;
+      padding: 0.5rem 0.85rem;
+      border-radius: var(--radius);
+      color: var(--text-main);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: 1px solid var(--border-color);
+    }
+    .nav-link.active {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .input-row { display: flex; gap: 0.5rem; }
+
+    button {
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    button.btn-primary {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .btn-danger {
+      color: var(--danger);
+      border-color: transparent;
+      background: var(--danger-light);
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+    .btn-danger:hover { background: var(--danger); color: #fff; }
+
+    input[type="text"] {
+      flex: 1;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-card);
+      color: var(--text-main);
+      outline: none;
+    }
+
+    .scroll-container {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 0.5rem;
+      background: var(--bg-primary);
+    }
+
+    ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius);
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      font-size: 0.875rem;
+    }
+
+    .sentinel {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    pre {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      padding: 1rem;
+      border-radius: var(--radius);
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      overflow-x: auto;
+      margin: 0;
+    }
+
+    .datepicker-wrapper { position: relative; display: inline-block; width: 100%; }
+    .datepicker-input { cursor: pointer !important; width: 100%; }
+    .datepicker-popup {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      z-index: 100;
+      width: 280px;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-md);
+      padding: 0.75rem;
+    }
+    .datepicker-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .datepicker-header button { padding: 0.2rem 0.6rem; }
+    .datepicker-title { font-weight: 600; font-size: 0.875rem; }
+    .datepicker-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+    .datepicker-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .datepicker-day {
+      background: transparent;
+      border: none;
+      padding: 0.4rem 0;
+      font-size: 0.8rem;
+      border-radius: var(--radius);
+      color: var(--text-main);
+      cursor: pointer;
+      text-align: center;
+    }
+    .datepicker-day:hover:not(.empty) { background-color: var(--primary-light); }
+    .datepicker-day.selected { background-color: var(--primary) !important; color: #ffffff !important; font-weight: bold; }
+    .datepicker-day.today { border: 1px solid var(--primary); }
+    .datepicker-day.empty { cursor: default; }
+
+    .stats-card {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .stat-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 1rem;
+      background-color: var(--bg-primary);
+      text-align: center;
+    }
+    .stat-number { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+  /**
+   * @typedef {Object} Task
+   * @property {number} id - Unique identifier for the task.
+   * @property {string} name - Name/description of the task.
+   * @property {string} [dueDate] - Optional ISO date string for due date.
+   */
+
+  /**
+   * @typedef {Object} FetchTasksResponse
+   * @property {Task[]} tasks - Array of task items.
+   * @property {boolean} hasMore - Indicates whether more items are available on the server.
+   * @property {number} total - Total task count on server.
+   * @property {number} page - Current page index.
+   */
+
+  /**
+   * @typedef {Object} DeleteTaskResponse
+   * @property {boolean} success - Operation success status.
+   * @property {number} id - ID of the deleted task.
+   */
+
+          // ==========================================
+          // Real REST API Service
+          // ==========================================
+
+  const API_BASE_URL = 'http://localhost:3000/api';
+
+  const ApiService = {
+    /**
+     * @param {number} [page=1]
+     * @param {number} [limit=10]
+     * @returns {Promise<FetchTasksResponse>}
+     */
+    async fetchTasks(page = 1, limit = 10) {
+      const response = await fetch(`${API_BASE_URL}/tasks?page=${page}&limit=${limit}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    },
+
+    /**
+     * @param {string} name
+     * @returns {Promise<Task>}
+     */
+    async createTask(name) {
+      const response = await fetch(`${API_BASE_URL}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    },
+
+    /**
+     * @param {number} id
+     * @returns {Promise<DeleteTaskResponse>}
+     */
+    async deleteTask(id) {
+      const response = await fetch(`${API_BASE_URL}/tasks/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      return await response.json();
+    }
+  };
+
+  // ==========================================
+  // Client-Side Router (SPA Engine)
+  // ==========================================
+
+  /**
+   * @callback RouteHandler
+   * @param {AppState} state
+   * @param {AppController} controller
+   * @returns {UIComponent}
+   */
+
+  /**
+   * Lightweight client-side hash router for SPA navigation.
+   */
+  class Router {
+    /**
+     * @param {AppController} controller - Active controller instance.
+     */
+    constructor(controller) {
+      /** @type {AppController} */
+      this.controller = controller;
+      /** @type {Record<string, RouteHandler>} */
+      this.routes = {};
+
+      window.addEventListener('hashchange', () => this.handleRoute());
+      window.addEventListener('load', () => this.handleRoute());
+    }
+
+    /**
+     * Registers a path route handler.
+     * @param {string} path - Hash route path (e.g. '/tasks').
+     * @param {RouteHandler} handler - Function returning the route's view.
+     * @returns {this}
+     */
+    addRoute(path, handler) {
+      this.routes[path] = handler;
+      return this;
+    }
+
+    /**
+     * Programmatically navigates to a route hash.
+     * @param {string} path - Hash target path.
+     */
+    navigate(path) {
+      window.location.hash = path;
+    }
+
+    /** Returns current hash path or defaults to `/tasks`. */
+    getCurrentPath() {
+      return window.location.hash.slice(1) || '/tasks';
+    }
+
+    /** Handles location hash changes and updates active route state. */
+    handleRoute() {
+      const path = this.getCurrentPath();
+      if (!this.routes[path]) {
+        this.navigate('/tasks');
+        return;
+      }
+      this.controller.currentRoute = path;
+      this.controller.render(store.getState());
+    }
+  }
+
+  // ==========================================
+  // Core Component Engine
+  // ==========================================
+
+  class UIComponent {
+    /**
+     * @param {string} tag - HTML tag name to create.
+     */
+    constructor(tag) {
+      /** @type {HTMLElement} */
+      this.element = document.createElement(tag);
+    }
+
+    text(str) { this.element.textContent = str; return this; }
+
+    value(val) {
+      /** @type {HTMLInputElement} */ (this.element).value = val ?? '';
+      return this;
+    }
+
+    placeholder(str) {
+      /** @type {HTMLInputElement} */ (this.element).placeholder = str;
+      return this;
+    }
+
+    id(idStr) { this.element.id = idStr; return this; }
+
+    addClass(cls) {
+      if (cls && typeof cls === 'string') {
+        cls.split(' ').forEach((c) => { if (c.trim()) this.element.classList.add(c.trim()); });
+      }
+      return this;
+    }
+
+    onClick(fn) { this.element.onclick = fn; return this; }
+
+    onInput(fn) {
+      this.element.oninput = (e) => fn(/** @type {HTMLInputElement} */ (e.target).value);
+      return this;
+    }
+
+    onSubmit(fn) {
+      this.element.onsubmit = (e) => { e.preventDefault(); fn(/** @type {SubmitEvent} */ (e)); };
+      return this;
+    }
+
+    add(...children) {
+      children.forEach((child) => {
+        if (child instanceof UIComponent) this.element.appendChild(child.element);
+        else if (child instanceof HTMLElement) this.element.appendChild(child);
+        else if (child !== null && child !== undefined) this.element.appendChild(document.createTextNode(String(child)));
+      });
+      return this;
+    }
+
+    getNode() { return this.element; }
+  }
+
+  /**
+   * Helper component creating SPA link anchors (`<a href="#/path">`).
+   * @param {string} label - Display label.
+   * @param {string} path - Target route path.
+   * @param {boolean} [isActive=false] - Active state flag.
+   * @returns {UIComponent}
+   */
+  const NavLink = (label, path, isActive = false) => {
+    const link = new UIComponent('a')
+            .text(label)
+            .addClass('nav-link');
+    /** @type {HTMLAnchorElement} */ (link.element).href = `#${path}`;
+    if (isActive) link.addClass('active');
+    return link;
+  };
+
+  const VerticalLayout = () => new UIComponent('div');
+  const HorizontalLayout = () => new UIComponent('div');
+  const FormLayout = () => new UIComponent('form').addClass('form-group');
+  const Button = (label) => new UIComponent('button').text(label);
+  const TextField = (placeholder = '') => new UIComponent('input').placeholder(placeholder);
+  const H1 = (text) => new UIComponent('h1').text(text);
+  const H2 = (text) => new UIComponent('h2').text(text);
+  const Paragraph = (text) => new UIComponent('p').text(text);
+  const UnorderedList = () => new UIComponent('ul');
+  const ListItem = () => new UIComponent('li');
+  const HR = () => new UIComponent('hr');
+  const Preformatted = (text) => new UIComponent('pre').text(text);
+
+  // ==========================================
+  // Reusable DatePicker Component
+  // ==========================================
+
+  /**
+   * @typedef {Object} DatePickerOptions
+   * @property {string|Date} [value]
+   * @property {string} [placeholder]
+   * @property {(formattedDate: string, rawDate: Date) => void} [onChange]
+   */
+
+  class DatePickerComponent extends UIComponent {
+    /**
+     * @param {DatePickerOptions} [options={}]
+     */
+    constructor(options = {}) {
+      super('div');
+      this.addClass('datepicker-wrapper');
+
+      const initialDate = options.value ? new Date(options.value) : new Date();
+      this.selectedDate = options.value ? new Date(options.value) : null;
+      this.viewYear = initialDate.getFullYear();
+      this.viewMonth = initialDate.getMonth();
+
+      this.placeholder = options.placeholder || 'Select date...';
+      this.onChangeCallback = options.onChange || null;
+      this.isOpen = false;
+
+      this.renderPicker();
+      this.setupGlobalEvents();
+    }
+
+    onChange(fn) {
+      this.onChangeCallback = fn;
+      return this;
+    }
+
+    toggleOpen() {
+      this.isOpen = !this.isOpen;
+      this.renderPicker();
+    }
+
+    close() {
+      if (this.isOpen) {
+        this.isOpen = false;
+        this.renderPicker();
+      }
+    }
+
+    setupGlobalEvents() {
+      document.addEventListener('click', (e) => {
+        if (!this.element.contains(/** @type {Node} */ (e.target))) {
+          this.close();
+        }
+      });
+    }
+
+    changeMonth(offset) {
+      this.viewMonth += offset;
+      if (this.viewMonth > 11) {
+        this.viewMonth = 0;
+        this.viewYear += 1;
+      } else if (this.viewMonth < 0) {
+        this.viewMonth = 11;
+        this.viewYear -= 1;
+      }
+      this.renderPicker();
+    }
+
+    selectDay(day) {
+      this.selectedDate = new Date(this.viewYear, this.viewMonth, day);
+      this.isOpen = false;
+      this.renderPicker();
+
+      if (this.onChangeCallback) {
+        const year = this.selectedDate.getFullYear();
+        const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+        const dateDay = String(this.selectedDate.getDate()).padStart(2, '0');
+        const formatted = `${year}-${month}-${dateDay}`;
+        this.onChangeCallback(formatted, this.selectedDate);
+      }
+    }
+
+    renderPicker() {
+      this.element.innerHTML = '';
+
+      const displayValue = this.selectedDate
+              ? this.selectedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+              : '';
+
+      const inputTrigger = TextField(this.placeholder)
+              .value(displayValue)
+              .addClass('datepicker-input');
+
+      /** @type {HTMLInputElement} */ (inputTrigger.element).readOnly = true;
+      inputTrigger.onClick((e) => {
+        e.stopPropagation();
+        this.toggleOpen();
+      });
+
+      this.add(inputTrigger);
+
+      if (!this.isOpen) return;
+
+      const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+
+      const header = HorizontalLayout().addClass('datepicker-header').add(
+              Button('‹').onClick((e) => { e.stopPropagation(); this.changeMonth(-1); }),
+              new UIComponent('span').text(`${monthNames[this.viewMonth]} ${this.viewYear}`).addClass('datepicker-title'),
+              Button('›').onClick((e) => { e.stopPropagation(); this.changeMonth(1); })
+      );
+
+      const daysHeader = new UIComponent('div').addClass('datepicker-weekdays');
+      ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].forEach(day => {
+        daysHeader.add(new UIComponent('span').text(day));
+      });
+
+      const grid = new UIComponent('div').addClass('datepicker-grid');
+      const firstDayIndex = new Date(this.viewYear, this.viewMonth, 1).getDay();
+      const daysInMonth = new Date(this.viewYear, this.viewMonth + 1, 0).getDate();
+
+      for (let i = 0; i < firstDayIndex; i++) {
+        grid.add(new UIComponent('span').addClass('datepicker-day empty'));
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const isSelected = this.selectedDate &&
+                this.selectedDate.getDate() === day &&
+                this.selectedDate.getMonth() === this.viewMonth &&
+                this.selectedDate.getFullYear() === this.viewYear;
+
+        const isToday = new Date().getDate() === day &&
+                new Date().getMonth() === this.viewMonth &&
+                new Date().getFullYear() === this.viewYear;
+
+        const dayCell = new UIComponent('button')
+                .text(String(day))
+                .addClass('datepicker-day')
+                .onClick((e) => {
+                  e.stopPropagation();
+                  this.selectDay(day);
+                });
+
+        if (isSelected) dayCell.addClass('selected');
+        if (isToday) dayCell.addClass('today');
+
+        grid.add(dayCell);
+      }
+
+      const popup = new UIComponent('div')
+              .addClass('datepicker-popup')
+              .onClick((e) => e.stopPropagation())
+              .add(header, daysHeader, grid);
+
+      this.add(popup);
+    }
+  }
+
+  const DatePicker = (options) => new DatePickerComponent(options);
+
+  // ==========================================
+  // Reactive Store
+  // ==========================================
+
+  /**
+   * @typedef {Object} AppState
+   * @property {Task[]} tasks - List of loaded task objects.
+   * @property {string} inputDraft - Current draft text for task input form.
+   * @property {string} selectedDueDate - Selected date string for new task creation.
+   * @property {'light'|'dark'} theme - Current application active theme.
+   * @property {boolean} isLoading - Indicates background pagination API request execution status.
+   * @property {number} page - Current pagination page.
+   * @property {boolean} hasMore - Flag indicating if more tasks are available on backend.
+   */
+
+  /**
+   * @callback ListenerCallback
+   * @param {AppState} state
+   */
+
+  class PersistentStore {
+    /**
+     * @param {string} storageKey
+     * @param {AppState} defaultState
+     */
+    constructor(storageKey, defaultState) {
+      this.storageKey = storageKey;
+      const saved = localStorage.getItem(this.storageKey);
+      /** @type {AppState} */
+      this.state = saved ? { ...defaultState, ...JSON.parse(saved) } : defaultState;
+      /** @type {ListenerCallback[]} */
+      this.listeners = [];
+    }
+
+    getState() { return this.state; }
+
+    /** @param {Partial<AppState>} nextState */
+    update(nextState) {
+      this.state = { ...this.state, ...nextState };
+      this.saveToStorage();
+      this.notify();
+    }
+
+    saveToStorage() {
+      try {
+        const { inputDraft, selectedDueDate, isLoading, hasMore, page, ...persistentData } = this.state;
+        localStorage.setItem(this.storageKey, JSON.stringify(persistentData));
+      } catch (e) { console.error(e); }
+    }
+
+    subscribe(listener) { this.listeners.push(listener); }
+    notify() { this.listeners.forEach((listener) => listener(this.state)); }
+  }
+
+  const store = new PersistentStore('mvc_infinite_datepicker_demo', {
+    tasks: [],
+    inputDraft: '',
+    selectedDueDate: '',
+    theme: 'light',
+    isLoading: false,
+    page: 1,
+    hasMore: true
+  });
+
+  // ==========================================
+  // SPA Views (Route Handlers)
+  // ==========================================
+
+  /**
+   * Tasks View Route Handler (`/tasks`).
+   * @param {AppState} state
+   * @param {AppController} controller
+   * @returns {UIComponent}
+   */
+  function TasksView(state, controller) {
+    const taskList = UnorderedList();
+
+    state.tasks.forEach((task) => {
+      const dateText = task.dueDate ? ` (Due: ${task.dueDate})` : '';
+      taskList.add(
+              ListItem().add(
+                      `#${task.id} - ${task.name}${dateText}`,
+                      Button('Delete')
+                              .addClass('btn-danger')
+                              .onClick(() => controller.deleteTask(task.id))
+              )
+      );
+    });
+
+    const sentinelText = state.isLoading
+            ? 'Loading more items...'
+            : state.hasMore
+                    ? 'Scroll down for more'
+                    : 'All tasks loaded 🎉';
+
+    const sentinel = new UIComponent('div')
+            .id('sentinel')
+            .addClass('sentinel')
+            .text(sentinelText);
+
+    const scrollContainer = new UIComponent('div')
+            .addClass('scroll-container')
+            .add(taskList, sentinel);
+
+    return VerticalLayout().add(
+            H2('Task List with Reusable DatePicker'),
+            FormLayout()
+                    .onSubmit(() => {
+                      if (state.inputDraft.trim()) {
+                        controller.createTask(state.inputDraft.trim(), state.selectedDueDate);
+                      }
+                    })
+                    .add(
+                            new UIComponent('div').addClass('input-row').add(
+                                    TextField('Add new task...')
+                                            .value(state.inputDraft)
+                                            .onInput((val) => controller.updateDraft(val)),
+                                    Button('Add Task').addClass('btn-primary')
+                            ),
+                            DatePicker({
+                              placeholder: 'Select optional due date...',
+                              value: state.selectedDueDate,
+                              onChange: (formatted) => controller.updateDueDate(formatted)
+                            })
+                    ),
+            scrollContainer
+    );
+  }
+
+  /**
+   * Analytics View Route Handler (`/analytics`).
+   * @param {AppState} state
+   * @returns {UIComponent}
+   */
+  function AnalyticsView(state) {
+    const tasksWithDates = state.tasks.filter(t => t.dueDate).length;
+
+    const statsGrid = new UIComponent('div').addClass('stats-card').add(
+            new UIComponent('div').addClass('stat-box').add(
+                    new UIComponent('div').addClass('stat-number').text(String(state.tasks.length)),
+                    new UIComponent('div').addClass('stat-label').text('Loaded Tasks')
+            ),
+            new UIComponent('div').addClass('stat-box').add(
+                    new UIComponent('div').addClass('stat-number').text(String(tasksWithDates)),
+                    new UIComponent('div').addClass('stat-label').text('Tasks with Due Dates')
+            )
+    );
+
+    return VerticalLayout().add(
+            H2('Task Analytics'),
+            statsGrid,
+            Paragraph('Statistics are dynamically derived from current reactive state.')
+    );
+  }
+
+  /**
+   * About View Route Handler (`/about`).
+   * @returns {UIComponent}
+   */
+  function AboutView() {
+    return VerticalLayout().add(
+            H2('About Architecture'),
+            Paragraph('This Single Page Application (SPA) features zero external framework dependencies:'),
+            UnorderedList().add(
+                    ListItem().add('Custom Client-Side Hash Router (#/tasks, #/analytics, #/about)'),
+                    ListItem().add('Fluent Vanilla JS UI Component library'),
+                    ListItem().add('Intersection Observer Infinite Scrolling'),
+                    ListItem().add('Reactive Persistent Store with LocalStorage sync'),
+                    ListItem().add('Real REST API connection to Express backend')
+            )
+    );
+  }
+
+  // ==========================================
+  // Application Controller
+  // ==========================================
+
+  class AppController {
+    /**
+     * @param {HTMLElement} rootElement
+     */
+    constructor(rootElement) {
+      /** @type {HTMLElement} */
+      this.rootElement = rootElement;
+      /** @type {IntersectionObserver|null} */
+      this.observer = null;
+      /** @type {string} */
+      this.currentRoute = '/tasks';
+
+      // Setup Router
+      /** @type {Router} */
+      this.router = new Router(this);
+      this.router
+              .addRoute('/tasks', (s, c) => TasksView(s, c))
+              .addRoute('/analytics', (s) => AnalyticsView(s))
+              .addRoute('/about', () => AboutView());
+
+      store.subscribe((state) => this.render(state));
+      this.fetchNextPage();
+    }
+
+    async fetchNextPage() {
+      const state = store.getState();
+      if (state.isLoading || !state.hasMore) return;
+
+      store.update({ isLoading: true });
+
+      try {
+        const data = await ApiService.fetchTasks(state.page, 10);
+
+        store.update({
+          tasks: [...state.tasks, ...data.tasks],
+          page: state.page + 1,
+          hasMore: data.hasMore,
+          isLoading: false
+        });
+      } catch (err) {
+        console.error('Failed to fetch tasks:', err);
+        store.update({ isLoading: false });
+      }
+    }
+
+    /**
+     * @param {string} name
+     * @param {string} [dueDate]
+     */
+    async createTask(name, dueDate) {
+      try {
+        const newTask = await ApiService.createTask(name);
+        if (dueDate) newTask.dueDate = dueDate;
+
+        store.update({
+          tasks: [newTask, ...store.getState().tasks],
+          inputDraft: '',
+          selectedDueDate: ''
+        });
+      } catch (err) {
+        console.error('Failed to create task:', err);
+      }
+    }
+
+    /** @param {number} id */
+    async deleteTask(id) {
+      try {
+        await ApiService.deleteTask(id);
+        const filteredTasks = store.getState().tasks.filter((t) => t.id !== id);
+        store.update({ tasks: filteredTasks });
+      } catch (err) {
+        console.error('Failed to delete task:', err);
+      }
+    }
+
+    /** @param {string} text */
+    updateDraft(text) {
+      store.state.inputDraft = text;
+    }
+
+    /** @param {string} dateStr */
+    updateDueDate(dateStr) {
+      store.state.selectedDueDate = dateStr;
+    }
+
+    toggleTheme() {
+      const nextTheme = store.getState().theme === 'light' ? 'dark' : 'light';
+      store.update({ theme: nextTheme });
+    }
+
+    setupIntersectionObserver() {
+      if (this.observer) this.observer.disconnect();
+
+      const sentinelEl = document.getElementById('sentinel');
+      if (!sentinelEl) return;
+
+      this.observer = new IntersectionObserver(
+              (entries) => {
+                if (entries[0].isIntersecting) {
+                  this.fetchNextPage();
+                }
+              },
+              {
+                root: document.querySelector('.scroll-container'),
+                threshold: 0.1
+              }
+      );
+
+      this.observer.observe(sentinelEl);
+    }
+
+    /**
+     * @param {AppState} state
+     */
+    render(state) {
+      this.rootElement.innerHTML = '';
+
+      if (state.theme === 'dark') document.body.classList.add('dark-mode');
+      else document.body.classList.remove('dark-mode');
+
+      const navbar = HorizontalLayout().addClass('navbar').add(
+              NavLink('Tasks', '/tasks', this.currentRoute === '/tasks'),
+              NavLink('Analytics', '/analytics', this.currentRoute === '/analytics'),
+              NavLink('About', '/about', this.currentRoute === '/about'),
+              Button(`Theme: ${state.theme.toUpperCase()}`).onClick(() => this.toggleTheme())
+      );
+
+      // Render view registered for current route hash
+      const routeHandler = this.router.routes[this.currentRoute] || this.router.routes['/tasks'];
+      const activeView = routeHandler(state, this);
+
+      const layout = VerticalLayout().addClass('app-card').add(
+              H1('Vanilla JS - Infinite Scroll SPA'),
+              navbar,
+              HR(),
+              activeView,
+              HR(),
+              H2('Global State Inspector'),
+              Preformatted(JSON.stringify({
+                route: this.currentRoute,
+                page: state.page,
+                hasMore: state.hasMore,
+                loadedItems: state.tasks.length,
+                isLoading: state.isLoading,
+                selectedDueDate: state.selectedDueDate
+              }, null, 2))
+      );
+
+      this.rootElement.appendChild(layout.getNode());
+
+      // Connect infinite scroll observer only when on Tasks view
+      if (this.currentRoute === '/tasks') {
+        this.setupIntersectionObserver();
+      }
+    }
+  }
+
+  // Initialize App Controller
+  new AppController(/** @type {HTMLElement} */ (document.getElementById('root')));
+</script>
+</body>
+</html>
