@@ -1,9 +1,10 @@
 /**
- * Sample view — demonstrates the fluent builder DSL with a reactive Store.
+ * HomeView — pure View.
  *
- * A "view" is a pure function returning a `UIComponent`. It reads state from
- * the store and re-renders itself when the store changes by asking the shell
- * (router) to re-render the current route.
+ * Rules enforced here:
+ *   - Reads state ONLY from `appStore.state`.
+ *   - Mutates state ONLY by calling controller methods.
+ *   - Never imports services, storage, fetch, or Capacitor plugins.
  */
 
 import {
@@ -25,33 +26,25 @@ import {
   When,
 } from '../framework';
 import { appStore } from '../state';
+import { TaskController } from '../controllers';
 
 export function HomeView(): UIComponent {
   const state = appStore.state;
 
-  const draftInput = TextField('Add a new task...').value(state.draft).onInput((v) =>
-    appStore.update({ draft: v }),
-  );
-
   return VerticalLayout().add(
     Card().add(
       H1('DailyGig — Vanilla Framework'),
-      Muted('A tiny, typesafe, builder-pattern UI library. No React, no JSX.'),
+      Muted('Typesafe fluent DSL. No React, no JSX. MVC with a data-service layer.'),
     ),
 
     Card().add(
       FormLayout()
-        .onSubmit(() => {
-          const name = appStore.state.draft.trim();
-          if (!name) return;
-          appStore.update({
-            tasks: [{ id: Date.now(), name }, ...appStore.state.tasks],
-            draft: '',
-          });
-        })
+        .onSubmit(() => TaskController.create(appStore.state.draft))
         .add(
           HorizontalLayout().add(
-            draftInput,
+            TextField('Add a new task...')
+              .value(state.draft)
+              .onInput((v) => TaskController.setDraft(v)),
             PrimaryButton('Add').attr('type', 'submit'),
           ),
         ),
@@ -61,9 +54,7 @@ export function HomeView(): UIComponent {
           ListItem().add(
             HorizontalLayout().add(
               `#${task.id} — ${task.name}`,
-              DangerButton('Delete').onClick(() =>
-                appStore.update({ tasks: appStore.state.tasks.filter((t) => t.id !== task.id) }),
-              ),
+              DangerButton('Delete').onClick(() => TaskController.remove(task.id)),
             ),
           ),
         ),
@@ -72,7 +63,7 @@ export function HomeView(): UIComponent {
 
     Card().add(
       Paragraph(`Tasks in store: ${state.tasks.length}`),
-      Button('Reset').onClick(() => appStore.update({ tasks: [], draft: '' })),
+      Button('Reset').onClick(() => TaskController.reset()),
     ),
   );
 }

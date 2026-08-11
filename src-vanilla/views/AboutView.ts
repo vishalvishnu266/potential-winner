@@ -8,29 +8,37 @@ import {
   VerticalLayout,
   Anchor,
   UIComponent,
+  Button,
+  Span,
+  HorizontalLayout,
 } from '../framework';
+import { OtaController } from '../controllers';
 
 export function AboutView(): UIComponent {
+  const ota = OtaController.snapshot();
+
   return VerticalLayout().add(
     Card().add(
-      H1('About this framework'),
-      Paragraph('A minimal, typesafe fluent UI DSL for Capacitor apps.'),
-      H2('Principles'),
+      H1('About'),
+      Paragraph('Minimal typesafe fluent UI DSL for Capacitor apps.'),
+      H2('MVC layers'),
       UList().add(
-        ListItem().add('Pure vanilla — no virtual DOM, no framework'),
-        ListItem().add('Builder pattern — every call returns `this`'),
-        ListItem().add('Type-safe — tag names carry through generics'),
-        ListItem().add('MVC — views read a Store, controllers mutate it'),
-        ListItem().add('Grow it feature-by-feature per iteration'),
+        ListItem().add('framework/  — UIComponent, tags, Store, Router'),
+        ListItem().add('services/   — http, storage, db, ota (only I/O)'),
+        ListItem().add('controllers/— orchestrate services + store'),
+        ListItem().add('views/      — read state, call controllers'),
       ),
-      H2('Next up'),
-      UList().add(
-        ListItem().add('Path params in the router (e.g. /job/:id)'),
-        ListItem().add('Component lifecycle hooks (onMount/onUnmount)'),
-        ListItem().add('Two-way binding helpers (input.bind(store, "field"))'),
-        ListItem().add('Wrap Capacitor plugins as services'),
+    ),
+    Card().add(
+      H2('OTA'),
+      Paragraph(`Bundle version: ${ota.version}`),
+      Paragraph(`Platform: ${ota.platform}`),
+      Paragraph(`Status: ${ota.statusMessage}`),
+      HorizontalLayout().add(
+        Button('Check for update').onClick(() => OtaController.checkNow()),
       ),
-      Paragraph('Return to the ').add(Anchor('home', '#/').cls('')),
+      Span(''),
+      Paragraph('').add(Anchor('← Back to Home', '#/')),
     ),
   );
 }

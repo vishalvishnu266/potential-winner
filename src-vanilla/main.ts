@@ -1,49 +1,58 @@
 /**
  * Application entrypoint.
  *
- * Wires: Router + Store + Shell + Views.
+ * Bootstrap order:
+ *   1. Ensure store has hydrated persisted state (TaskController.load).
+ *   2. Mount the persistent shell (nav + content slot) + OTA overlay.
+ *   3. Register routes and start the router.
+ *   4. Kick off OTA auto-poll (no-op on the web).
  */
 
 import { Router } from './framework';
 import { appStore } from './state';
 import { HomeView } from './views/HomeView';
 import { AboutView } from './views/AboutView';
+import { OtaOverlay } from './views/OtaOverlay';
 import { buildShell, ShellRoute } from './shell';
+import { TaskController, OtaController } from './controllers';
 
 const ROUTES: ShellRoute[] = [
   { path: '/', label: 'Home' },
   { path: '/about', label: 'About' },
 ];
 
-const host = document.getElementById('app');
-if (!host) throw new Error('#app root not found');
+async function bootstrap(): Promise<void> {
+  const host = document.getElementById('app');
+  if (!host) throw new Error('#app root not found');
 
-const router = new Router().setFallback('/');
+  // 1. Hydrate persisted state before first render.
+  await TaskController.load();
 
-/**
- * Mount the persistent shell once, then let the router only swap the content
- * slot. This avoids destroying the nav bar on every navigation.
- */
-function mountApp(): void {
-  const { root, slot } = buildShell(ROUTES, router.currentPath);
-  host!.replaceChildren(root.el);
+  const router = new Router().setFallback('/');
 
-  router
-    .route('/', () => HomeView())
-    .route('/about', () => AboutView());
+  const mount = (): void => {
+    const { root, slot } = buildShell(ROUTES, router.currentPath);
+    host.replaceChildren(root.el, OtaOverlay().el);
+    router
+      .route('/', () => HomeView())
+      .route('/about', () => AboutView());
+    router.start(slot);
+  };
 
-  router.start(slot);
+  // 2. Re-render current view on store change (touches only the content slot).
+  appStore.subscribe(() => router.render());
+
+  // 3. Re-mount shell on nav (to refresh active-link highlight).
+  window.addEventListener('hashchange', mount);
+
+  mount();
+
+  // 4. Start OTA auto-poller. No-op on the web; polls every 5 min on device.
+  OtaController.start(5 * 60 * 1000);
 }
 
-// Re-render the current view whenever the store changes. Because the shell is
-// persistent, this only touches the content slot.
-appStore.subscribe(() => router.render());
-
-// Re-mount the shell (to refresh active nav highlight) on hash changes.
-window.addEventListener('hashchange', () => {
-  const { root, slot } = buildShell(ROUTES, router.currentPath);
-  host!.replaceChildren(root.el);
-  router.start(slot);
+bootstrap().catch((err) => {
+  console.error('[bootstrap]', err);
+  const host = document.getElementById('app');
+  if (host) host.textContent = `Boot failed: ${String(err)}`;
 });
-
-mountApp();

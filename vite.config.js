@@ -10,8 +10,6 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf-8')
 
 // Auto-bump the patch version on every `vite build` so every build produces
 // a NEW bundle version that the OTA server can serve.
-// We combine package.json version + a UTC timestamp so it is monotonically
-// increasing and human-readable, e.g. "0.0.0+20260807130612".
 function buildVersion() {
     const now = new Date()
     const pad = (n) => String(n).padStart(2, '0')
@@ -21,19 +19,26 @@ function buildVersion() {
 }
 
 const APP_VERSION = process.env.APP_VERSION || buildVersion()
-// LAN IP of the machine running the Axum server. Override at build time:
-//   OTA_HOST=192.168.1.42 npm run build
-// Defaults to the current dev machine so the built app "just works" on
-// a physical phone connected to the same Wi-Fi.
 const OTA_HOST = process.env.OTA_HOST || '192.168.0.4'
 const OTA_PORT = Number(process.env.OTA_PORT || 3000)
 
+// Multi-entry:
+//  - `index.html`  → vanilla framework app (what the Capacitor app runs).
+//  - `react.html`  → the legacy React app, kept around for browser preview.
+// Vite serves both in dev; both are emitted by `vite build`.
 export default defineConfig({
     plugins: [react(), tailwindcss()],
-    // Bind Vite dev server on all interfaces so a phone on the LAN can hit it
     server: {
         host: '0.0.0.0',
         port: 5173,
+    },
+    build: {
+        rollupOptions: {
+            input: {
+                main: resolve(__dirname, 'index.html'),
+                react: resolve(__dirname, 'react.html'),
+            },
+        },
     },
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),

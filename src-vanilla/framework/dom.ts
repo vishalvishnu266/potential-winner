@@ -62,6 +62,69 @@ export class UIComponent<T extends Tag = Tag> {
     return this;
   }
 
+  /** Insert children at the *start* of this element. */
+  prepend(...children: Child[]): this {
+    const frag = document.createDocumentFragment();
+    for (const child of children) {
+      if (child === null || child === undefined || child === false || child === true) continue;
+      if (child instanceof UIComponent) frag.appendChild(child.el);
+      else if (child instanceof Node) frag.appendChild(child);
+      else frag.appendChild(document.createTextNode(String(child)));
+    }
+    this.el.insertBefore(frag, this.el.firstChild);
+    return this;
+  }
+
+  /** Detach this element from its parent (no-op if unmounted). */
+  remove(): this {
+    this.el.parentNode?.removeChild(this.el);
+    return this;
+  }
+
+  /** Remove a specific child component. Safe if the child is not mounted here. */
+  removeChild(child: UIComponent | Node): this {
+    const node = child instanceof UIComponent ? child.el : child;
+    if (node.parentNode === this.el) this.el.removeChild(node);
+    return this;
+  }
+
+  /** Replace this element in the DOM with another component or node. */
+  replaceWith(other: UIComponent | Node): this {
+    const node = other instanceof UIComponent ? other.el : other;
+    this.el.parentNode?.replaceChild(node, this.el);
+    return this;
+  }
+
+  /** Replace all children with the given ones (typed wrapper). */
+  replaceChildren(...children: Child[]): this {
+    this.clear();
+    return this.add(...children);
+  }
+
+  /** Insert `child` right before `ref`. `ref` must already be a child of this element. */
+  insertBefore(child: UIComponent | Node, ref: UIComponent | Node): this {
+    const c = child instanceof UIComponent ? child.el : child;
+    const r = ref instanceof UIComponent ? ref.el : ref;
+    if (r.parentNode !== this.el) throw new Error('insertBefore(): ref is not a child of this element');
+    this.el.insertBefore(c, r);
+    return this;
+  }
+
+  /** Insert `child` right after `ref`. `ref` must already be a child of this element. */
+  insertAfter(child: UIComponent | Node, ref: UIComponent | Node): this {
+    const c = child instanceof UIComponent ? child.el : child;
+    const r = ref instanceof UIComponent ? ref.el : ref;
+    if (r.parentNode !== this.el) throw new Error('insertAfter(): ref is not a child of this element');
+    this.el.insertBefore(c, r.nextSibling);
+    return this;
+  }
+
+  /** Toggle presence in the DOM without discarding the element. */
+  visible(flag: boolean): this {
+    this.el.style.display = flag ? '' : 'none';
+    return this;
+  }
+
   // -------------------------------------------------------------------------
   // Attributes / classes / styles
   // -------------------------------------------------------------------------
