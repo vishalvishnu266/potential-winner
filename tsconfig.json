@@ -18,5 +18,5 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true
   },
-  "include": ["src", "src-vanilla"]
+  "include": ["src"]
 }

@@ -26,23 +26,14 @@ const OTA_PORT = Number(process.env.OTA_PORT || 3000)
 // demo without any backend. Override with `APP_ENV=dev npm run build`.
 const APP_ENV = process.env.APP_ENV || 'mock'
 
-// Multi-entry:
-//  - `index.html`  → vanilla framework app (what the Capacitor app runs).
-//  - `react.html`  → the legacy React app, kept around for browser preview.
-// Vite serves both in dev; both are emitted by `vite build`.
+// Single-entry React app served from `index.html` → `src/main.tsx`.
+// This is what both `npm run dev` (browser) and the Capacitor Android/iOS
+// shells load from `dist/index.html`.
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     server: {
         host: '0.0.0.0',
         port: 5173,
-    },
-    build: {
-        rollupOptions: {
-            input: {
-                main: resolve(__dirname, 'index.html'),
-                react: resolve(__dirname, 'react.html'),
-            },
-        },
     },
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),
