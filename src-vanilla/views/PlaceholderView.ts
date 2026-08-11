@@ -1,15 +1,10 @@
-/**
- * PlaceholderView — used for tabs whose real screens land in iteration B/C.
- * Keeps the app fully navigable + testable on device today.
- */
-
-import { El, UIComponent } from '../framework';
-import { PageHeader } from '../components/PageHeader';
+import { UIComponent } from '../framework';
+import { Screen, NavHeader, Scroller } from '../ui';
 import { EmptyState } from '../components/EmptyState';
 
 export function PlaceholderView(title: string, hint: string): UIComponent {
-  return El('div').cls('col').add(
-    PageHeader({ title }),
-    El('main').cls('app-main').add(EmptyState('🛠️', title, hint)),
-  );
+  return Screen([
+    NavHeader({ title, back: true }),
+    Scroller({ children: [EmptyState('🛠️', title, hint)] }),
+  ]);
 }

@@ -1,144 +1,65 @@
-/**
- * Home — DASHBOARD ONLY.
- *
- * Strict rule enforced: Home never contains a "Post" or "Find" primary
- * action. Those live in their dedicated tabs. Home shows the user's
- * current activity, personalised suggestions, and local highlights.
- */
+/** Home — dashboard only. Composed entirely from named UI components. */
 
-import { El, UIComponent } from '../framework';
-import { Icon } from '../framework/icons';
-import { SponsorStrip } from '../components/SponsorStrip';
+import { UIComponent } from '../framework';
+import {
+  Screen, LargeHeader, Scroller,
+  SectionTitle, Muted,
+  IconButton, PlainButton, BigActionButton,
+  CategoryCarousel,
+  List, JobListRow, SponsorStrip,
+  Row,
+} from '../ui';
 import { EmptyState } from '../components/EmptyState';
 import { appStore } from '../state';
 import { FeedController } from '../controllers';
 import { i18n } from '../i18n';
 import { router } from '../router';
-import { CATEGORIES, metaOf } from '../data/categories';
-import { formatAgo } from '../data/mock';
-import { haptics } from '../services';
 
 export function HomeView(): UIComponent {
   const t = i18n.t;
   const s = appStore.state;
-
-  // Kick off loads if empty.
   if (s.local.sponsors.length === 0 && !s.local.loading) void FeedController.loadSponsors();
   if (s.feed.jobs.length === 0 && !s.feed.loading) void FeedController.loadNearby();
 
-  const root = El('div').cls('col').style({ height: '100%', minHeight: '0' });
+  const preview = s.feed.jobs.slice(0, 3);
 
-  // Large-title style header.
-  const header = El('div').cls('app-header large');
-  header.add(
-    El('div').cls('app-header-inner').add(
-      El('span').cls('muted small').text(new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })),
-      El('button').cls('btn ghost sm').attr('aria-label', 'About')
-        .add(Icon('settings', { size: 20 }))
-        .onClick(() => { void haptics.light(); router.navigate('/me'); }),
-    ),
-    El('div').cls('large-title').text(s.session.name ? t.app.hi(s.session.name) : t.app.welcome),
-  );
-  root.add(header);
-
-  // Main scroller
-  const main = El('main').cls('app-main');
-  const inner = El('div').cls('app-main-inner');
-
-  // --- Primary shortcut: Find nearby services (call directly, no job post).
-  inner.add(
-    El('button').cls('big-action secondary').style({ marginTop: 'var(--sp-1)' }).add(
-      El('span').style({
-        width: '40px', height: '40px', display: 'inline-flex',
-        alignItems: 'center', justifyContent: 'center',
-        borderRadius: '12px',
-        background: 'var(--c-primary-soft)', color: 'var(--c-primary)',
-        flexShrink: '0',
-      }).add(Icon('phone', { size: 20 })),
-      El('div').cls('col grow').style({ gap: '2px', minWidth: '0', textAlign: 'left' }).add(
-        El('div').cls('big-title').text('Find nearby services'),
-        El('div').cls('big-sub muted').text('Cab · Auto · Puncture · Mechanic · Cook · Shops'),
-      ),
-      El('span').cls('list-chev').add(Icon('chevron-right', { size: 20 })),
-    ).onClick(() => { void haptics.light(); router.navigate('/find'); }),
-  );
-
-  // --- Suggested categories (small carousel, tapping deep-links into /find)
-  inner.add(El('div').cls('section-title').text('Suggested'));
-  const hcarousel = El('div').cls('h-scroll').style({ padding: '4px 0' });
-  const suggested = CATEGORIES.slice(0, 6);
-  for (const cat of suggested) {
-    const label = (t.category as Record<string, string>)[cat.key];
-    hcarousel.add(
-      El('button').cls('cat-tile').style({ minWidth: '104px' })
-        .add(
-          El('span').cls('cat-ico')
-            .style({
-              background: `var(--tone-${cat.tone}-soft)`,
-              color: `var(--tone-${cat.tone})`,
-            })
-            .add(Icon(cat.icon, { size: 22 })),
-          El('span').cls('cat-label').text(label),
-        )
-        .onClick(() => {
-          void haptics.selection();
-          // Deep-link into Find services with pre-selected category.
-          router.navigate('/find?cat=' + cat.key);
+  return Screen([
+    LargeHeader({
+      title: s.session.name ? t.app.hi(s.session.name) : t.app.welcome,
+      subtitle: new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }),
+      trailing: IconButton({ icon: 'settings', ariaLabel: 'Settings', onClick: () => router.navigate('/me') }),
+    }),
+    Scroller({
+      children: [
+        BigActionButton({
+          icon: 'phone',
+          title: 'Find nearby services',
+          subtitle: 'Cab · Auto · Puncture · Mechanic · Cook · Shops',
+          variant: 'secondary',
+          onClick: () => router.navigate('/find'),
         }),
-    );
-  }
-  inner.add(hcarousel);
 
-  // --- Recent nearby preview (read-only). Full list lives in /work.
-  inner.add(
-    El('div').cls('row between').style({ padding: '0 var(--sp-2)' }).add(
-      El('div').cls('section-title').style({ padding: '0', margin: '0' }).text('Recent nearby'),
-      El('button').cls('btn plain sm').text('See all')
-        .onClick(() => { void haptics.light(); router.navigate('/work'); }),
-    ),
-  );
+        SectionTitle('Suggested'),
+        CategoryCarousel({ onPick: (k) => router.navigate('/find?cat=' + k) }),
 
-  const jobsPreview = s.feed.jobs.slice(0, 3);
-  if (jobsPreview.length === 0 && !s.feed.loading) {
-    inner.add(EmptyState('🧭', 'Nothing nearby yet', 'Pull to refresh in Work tab.'));
-  } else {
-    const list = El('div').cls('list');
-    for (const j of jobsPreview) {
-      const meta = metaOf(j.category);
-      const label = (t.category as Record<string, string>)[j.category] ?? j.category;
-      list.add(
-        El('button').cls('job-row').onClick(() => {
-          void haptics.light();
-          router.navigate('/job/' + j.id);
-        }).add(
-          El('span').cls('job-icon').style({
-            background: `var(--tone-${meta.tone}-soft)`,
-            color: `var(--tone-${meta.tone})`,
-          }).add(Icon(meta.icon, { size: 20 })),
-          El('div').cls('job-body').add(
-            El('div').cls('job-title truncate').text(j.description),
-            El('div').cls('job-meta truncate').text(`${label} · ${j.distanceKm.toFixed(1)} km · ${formatAgo(j.postedAt)}`),
-          ),
-          El('div').cls('job-price num').text('₹' + j.budget),
-        ),
-      );
-    }
-    inner.add(list);
-  }
+        Row([
+          SectionTitle('Recent nearby'),
+          PlainButton({ label: 'See all', size: 'sm', onClick: () => router.navigate('/work') }),
+        ]),
 
-  // --- Local businesses
-  inner.add(
-    El('div').cls('row between').style({ padding: '0 var(--sp-2)' }).add(
-      El('div').cls('section-title').style({ padding: '0', margin: '0' }).text(t.home.localBusinesses),
-      El('button').cls('btn plain sm').text('See all')
-        .onClick(() => { void haptics.light(); router.navigate('/local'); }),
-    ),
-  );
+        preview.length === 0
+          ? EmptyState('🧭', 'Nothing nearby yet', 'Pull to refresh in Work tab.')
+          : List(preview.map((j) => JobListRow({ job: j, onOpen: () => router.navigate('/job/' + j.id) }))),
 
-  if (s.local.sponsors.length === 0) inner.add(EmptyState('🏪', t.local.empty));
-  else inner.add(SponsorStrip(s.local.sponsors));
+        Row([
+          SectionTitle(t.home.localBusinesses),
+          PlainButton({ label: 'See all', size: 'sm', onClick: () => router.navigate('/local') }),
+        ]),
 
-  main.add(inner);
-  root.add(main);
-  return root;
+        s.local.sponsors.length === 0
+          ? EmptyState('🏪', t.local.empty)
+          : SponsorStrip(s.local.sponsors.map((sp) => ({ name: sp.name, category: sp.category, distanceKm: sp.distanceKm }))),
+      ],
+    }),
+  ]);
 }
