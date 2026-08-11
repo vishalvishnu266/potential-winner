@@ -1,13 +1,9 @@
-import { MOCK_SPONSORS, Sponsor } from '../data/mock';
-import { http } from './http';
-import { env } from '../env';
+/**
+ * Public `sponsorsService` — thin re-export of the repository chosen by
+ * the factory at boot.
+ */
 
-export const sponsorsService = {
-  async listNearby(): Promise<Sponsor[]> {
-    if (env.isMock()) {
-      await new Promise((r) => setTimeout(r, 100));
-      return MOCK_SPONSORS;
-    }
-    return http.get<Sponsor[]>(`${env.baseUrl()}/api/sponsors`);
-  },
-};
+import { repositories } from '../repositories';
+import type { SponsorsRepository } from '../repositories/types';
+
+export const sponsorsService: SponsorsRepository = repositories.sponsors;
