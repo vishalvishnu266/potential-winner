@@ -1,24 +1,24 @@
 /**
  * FindWorkView — THE ONLY place to browse nearby jobs.
- *
- * Controls (consolidated at top):
- *   1. Radius pill (opens a bottom sheet to change 1/3/5/10 km).
- *   2. Category chips (horizontal snap-scroll).
- * Pull-to-refresh on the list.
+ * Now with List / Radar toggle.
  */
 
 import { El, UIComponent, attachPullToRefresh, openSheet } from '../framework';
 import { Icon } from '../framework/icons';
-import { PageHeader } from '../components/PageHeader';
 import { EmptyState } from '../components/EmptyState';
 import { SkeletonList } from '../components/Skeletons';
+import { Radar, RadarPoint } from '../components/Radar';
 import { appStore } from '../state';
 import { FeedController } from '../controllers';
 import { i18n } from '../i18n';
 import { router } from '../router';
-import { CATEGORIES, metaOf, CategoryKey } from '../data/categories';
+import { CATEGORIES, metaOf } from '../data/categories';
 import { formatAgo } from '../data/mock';
-import { haptics } from '../services';
+import { haptics, headingService } from '../services';
+
+type ViewMode = 'list' | 'radar';
+const ORIGIN = { lat: 12.9716, lon: 77.5946 };
+let mode: ViewMode = 'list';
 
 export function FindWorkView(): UIComponent {
   const t = i18n.t;
@@ -27,10 +27,27 @@ export function FindWorkView(): UIComponent {
 
   const root = El('div').cls('col').style({ height: '100%', minHeight: '0' });
 
-  // Header w/ radius chip on the right.
+  // Header with view-mode toggle + radius chip
+  const seg = El('div').cls('seg').style({ maxWidth: '180px' });
+  const listBtn = El('button').text('List');
+  const radarBtn = El('button').text('Radar');
+  seg.add(listBtn, radarBtn);
+  const refreshSeg = (): void => {
+    listBtn.el.classList.toggle('active', mode === 'list');
+    radarBtn.el.classList.toggle('active', mode === 'radar');
+  };
+  refreshSeg();
+  listBtn.onClick(() => { if (mode === 'list') return; void haptics.selection(); mode = 'list'; renderBody(); refreshSeg(); });
+  radarBtn.onClick(async () => {
+    if (mode === 'radar') return;
+    void haptics.selection();
+    if (headingService.permission === 'prompt') await headingService.request();
+    mode = 'radar'; renderBody(); refreshSeg();
+  });
+
   const header = El('div').cls('app-header large').add(
     El('div').cls('app-header-inner').add(
-      El('div').style({ width: '32px' }), // spacer for symmetry
+      seg,
       El('button').cls('chip').text(t.work.withinKm(s.ui.radiusKm))
         .add(Icon('chevron-right', { size: 14 }))
         .onClick(() => openRadiusSheet()),
@@ -39,7 +56,10 @@ export function FindWorkView(): UIComponent {
   );
   root.add(header);
 
-  // Category filter row (below the sticky header, still stuck-ish).
+  const main = El('main').cls('app-main');
+  const inner = El('div').cls('app-main-inner');
+
+  // Category filter row
   const filterRow = El('div').cls('h-scroll').style({ marginTop: '-4px' });
   const mk = (label: string, active: boolean, onClick: () => void): UIComponent => {
     const c = El('button').cls('chip').text(label).onClick(() => { void haptics.selection(); onClick(); });
@@ -54,21 +74,21 @@ export function FindWorkView(): UIComponent {
       appStore.update({ ui: { ...appStore.state.ui, categoryFilter: cat.key } })));
   }
 
-  const main = El('main').cls('app-main');
-  const inner = El('div').cls('app-main-inner');
+  const body = El('div').cls('col').style({ gap: 'var(--sp-3)' });
+  inner.add(filterRow, body);
+  main.add(inner);
+  root.add(main);
 
-  inner.add(filterRow);
-
-  // List
   const filtered = s.ui.categoryFilter === 'all'
     ? s.feed.jobs
     : s.feed.jobs.filter((j) => j.category === s.ui.categoryFilter);
 
-  if (s.feed.loading && s.feed.jobs.length === 0) {
-    inner.add(SkeletonList(6));
-  } else if (filtered.length === 0) {
-    inner.add(EmptyState('🧭', t.work.noJobs(s.ui.radiusKm)));
-  } else {
+  const renderList = (): void => {
+    if (s.feed.loading && s.feed.jobs.length === 0) { body.replaceChildren(SkeletonList(6).el); return; }
+    if (filtered.length === 0) {
+      body.replaceChildren(EmptyState('🧭', t.work.noJobs(s.ui.radiusKm)).el);
+      return;
+    }
     const list = El('div').cls('list');
     for (const j of filtered) {
       const meta = metaOf(j.category);
@@ -91,22 +111,34 @@ export function FindWorkView(): UIComponent {
         ),
       );
     }
-    inner.add(list);
-  }
+    body.replaceChildren(list.el);
+  };
 
-  main.add(inner);
-  root.add(main);
+  const renderRadar = (): void => {
+    if (filtered.length === 0) { body.replaceChildren(EmptyState('🧭', t.work.noJobs(s.ui.radiusKm)).el); return; }
+    const points: RadarPoint[] = filtered.map((j) => ({
+      id: j.id,
+      distanceKm: j.distanceKm,
+      bearingDeg: bearingFrom(ORIGIN.lat, ORIGIN.lon, j.lat, j.lon),
+      tone: metaOf(j.category).tone,
+      label: j.description,
+    }));
+    body.replaceChildren(
+      Radar({
+        points, maxKm: s.ui.radiusKm,
+        onSelect: (id) => { void haptics.light(); router.navigate('/job/' + id); },
+      }).el,
+      El('div').cls('small center').style({ textAlign: 'center', marginTop: 'var(--sp-2)' })
+        .text(t.work.radarHint(filtered.length)).el,
+    );
+  };
 
-  // Wire pull-to-refresh once mounted.
-  main.onMount((scroller) =>
-    attachPullToRefresh(scroller, {
-      onRefresh: async () => {
-        void haptics.medium();
-        await FeedController.loadNearby();
-        void haptics.success();
-      },
-    }),
-  );
+  const renderBody = (): void => { mode === 'list' ? renderList() : renderRadar(); };
+  renderBody();
+
+  main.onMount((scroller) => attachPullToRefresh(scroller, {
+    onRefresh: async () => { void haptics.medium(); await FeedController.loadNearby(); void haptics.success(); },
+  }));
 
   return root;
 }
@@ -134,4 +166,14 @@ function openRadiusSheet(): void {
     wrap.add(list);
     return wrap;
   });
+}
+
+function bearingFrom(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const toRad = (d: number): number => (d * Math.PI) / 180;
+  const φ1 = toRad(lat1), φ2 = toRad(lat2);
+  const λ1 = toRad(lon1), λ2 = toRad(lon2);
+  const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+  const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+  const θ = Math.atan2(y, x);
+  return ((θ * 180) / Math.PI + 360) % 360;
 }

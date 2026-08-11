@@ -84,6 +84,7 @@ export class Router {
 export function getTabForPath(path: string): string {
   if (path === '/' || path.startsWith('/home')) return 'home';
   if (path.startsWith('/work'))  return 'work';
+  if (path.startsWith('/find'))  return 'home';   // Find is reached from Home
   if (path.startsWith('/post'))  return 'post';
   if (path.startsWith('/local')) return 'local';
   if (path.startsWith('/me'))    return 'me';

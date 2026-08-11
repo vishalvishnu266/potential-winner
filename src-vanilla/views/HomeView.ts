@@ -45,7 +45,25 @@ export function HomeView(): UIComponent {
   const main = El('main').cls('app-main');
   const inner = El('div').cls('app-main-inner');
 
-  // --- Suggested categories (small carousel, deep-links into /post step 1)
+  // --- Primary shortcut: Find nearby services (call directly, no job post).
+  inner.add(
+    El('button').cls('big-action secondary').style({ marginTop: 'var(--sp-1)' }).add(
+      El('span').style({
+        width: '40px', height: '40px', display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center',
+        borderRadius: '12px',
+        background: 'var(--c-primary-soft)', color: 'var(--c-primary)',
+        flexShrink: '0',
+      }).add(Icon('phone', { size: 20 })),
+      El('div').cls('col grow').style({ gap: '2px', minWidth: '0', textAlign: 'left' }).add(
+        El('div').cls('big-title').text('Find nearby services'),
+        El('div').cls('big-sub muted').text('Cab · Auto · Puncture · Mechanic · Cook · Shops'),
+      ),
+      El('span').cls('list-chev').add(Icon('chevron-right', { size: 20 })),
+    ).onClick(() => { void haptics.light(); router.navigate('/find'); }),
+  );
+
+  // --- Suggested categories (small carousel, tapping deep-links into /find)
   inner.add(El('div').cls('section-title').text('Suggested'));
   const hcarousel = El('div').cls('h-scroll').style({ padding: '4px 0' });
   const suggested = CATEGORIES.slice(0, 6);
@@ -64,9 +82,8 @@ export function HomeView(): UIComponent {
         )
         .onClick(() => {
           void haptics.selection();
-          // Deep-link into Post wizard with pre-selected category.
-          appStore.update({ ui: { ...appStore.state.ui, categoryFilter: cat.key } });
-          router.navigate('/post?cat=' + cat.key);
+          // Deep-link into Find services with pre-selected category.
+          router.navigate('/find?cat=' + cat.key);
         }),
     );
   }

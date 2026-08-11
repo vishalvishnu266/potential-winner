@@ -12,6 +12,7 @@ import { statusBarService } from './services';
 
 import { HomeView } from './views/HomeView';
 import { FindWorkView } from './views/FindWorkView';
+import { FindServicesView } from './views/FindServicesView';
 import { PostJobView } from './views/PostJobView';
 import { JobDetailView } from './views/JobDetailView';
 import { LocalView } from './views/LocalView';
@@ -34,6 +35,7 @@ async function bootstrap(): Promise<void> {
   router
     .route('/',        () => HomeView())
     .route('/work',    () => FindWorkView())
+    .route('/find',    ({ query }) => FindServicesView(query))
     .route('/post',    ({ query }) => PostJobView(query))
     .route('/local',   () => LocalView())
     .route('/me',      () => MeView())
