@@ -1,0 +1,124 @@
+/* =============================================================================
+   DailyGig — Design tokens.
+   Single source of truth for colours, spacing, radii, typography, motion.
+   Everything else in the app reads from these variables.
+   ============================================================================= */
+
+:root {
+  /* --- Colour system (light) --- */
+  --c-bg:            #f7f8fb;
+  --c-surface:       #ffffff;
+  --c-surface-2:     #f1f4f9;
+  --c-elev:          #ffffff;
+  --c-text:          #0b1220;
+  --c-text-muted:    #5c6a86;
+  --c-text-inverse:  #ffffff;
+  --c-hairline:      #e6e9f0;
+  --c-border:        #d9dee8;
+
+  --c-primary:       #4f8cff;
+  --c-primary-2:     #2f6fe0;
+  --c-primary-soft:  #eaf1ff;
+  --c-danger:        #ef4444;
+  --c-danger-soft:   #fdecec;
+  --c-warning:       #f59e0b;
+  --c-success:       #16a34a;
+  --c-success-soft:  #e7f7ed;
+
+  /* Category tones (soft backgrounds + solid accent per tone). */
+  --tone-blue-soft:    #e6f0ff;   --tone-blue:    #2f6fe0;
+  --tone-green-soft:   #e5f6ec;   --tone-green:   #16a34a;
+  --tone-amber-soft:   #fff2d6;   --tone-amber:   #b45309;
+  --tone-rose-soft:    #ffe3e6;   --tone-rose:    #be123c;
+  --tone-violet-soft:  #ece4ff;   --tone-violet:  #6d28d9;
+  --tone-teal-soft:    #d7f2ee;   --tone-teal:    #0f766e;
+  --tone-orange-soft:  #ffe4cf;   --tone-orange:  #c2410c;
+  --tone-slate-soft:   #e5e8ef;   --tone-slate:   #334155;
+
+  /* --- Spacing scale (4px base) --- */
+  --sp-0:  0;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-8:  32px;
+  --sp-10: 40px;
+
+  /* --- Radii --- */
+  --r-1: 6px;
+  --r-2: 10px;
+  --r-3: 14px;
+  --r-4: 18px;
+  --r-pill: 999px;
+
+  /* --- Typography --- */
+  --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+            "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Tamil", sans-serif;
+  --fs-xs:  12px;
+  --fs-sm:  13px;
+  --fs-md:  15px;
+  --fs-lg:  17px;
+  --fs-xl:  20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 30px;
+  --lh:     1.4;
+
+  /* --- Elevation --- */
+  --sh-1: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sh-2: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --sh-3: 0 12px 32px rgba(15, 23, 42, 0.16);
+
+  /* --- Motion --- */
+  --motion-fast: 120ms cubic-bezier(.2,.8,.2,1);
+  --motion-med:  220ms cubic-bezier(.2,.8,.2,1);
+
+  /* --- Layout --- */
+  --tabbar-h: 60px;
+  --header-h: 56px;
+  --content-max: 720px;
+
+  /* Safe-area insets — fallback to 0 when not present. */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+/* --- Dark mode --------------------------------------------------------- */
+:root[data-theme="dark"] {
+  --c-bg:            #0b1220;
+  --c-surface:       #111a2e;
+  --c-surface-2:     #0f172a;
+  --c-elev:          #16223a;
+  --c-text:          #e6edf7;
+  --c-text-muted:    #8ea0bd;
+  --c-text-inverse:  #0b1220;
+  --c-hairline:      #1f2a44;
+  --c-border:        #2a3654;
+
+  --c-primary-soft:  rgba(79, 140, 255, 0.14);
+  --c-danger-soft:   rgba(239, 68, 68, 0.14);
+  --c-success-soft:  rgba(22, 163, 74, 0.16);
+
+  --tone-blue-soft:    rgba(79,140,255,0.16);   --tone-blue:    #7aa9ff;
+  --tone-green-soft:   rgba(22,163,74,0.18);    --tone-green:   #4ade80;
+  --tone-amber-soft:   rgba(245,158,11,0.20);   --tone-amber:   #fbbf24;
+  --tone-rose-soft:    rgba(239,68,68,0.16);    --tone-rose:    #fb7185;
+  --tone-violet-soft:  rgba(139,92,246,0.20);   --tone-violet:  #c4b5fd;
+  --tone-teal-soft:    rgba(20,184,166,0.18);   --tone-teal:    #5eead4;
+  --tone-orange-soft:  rgba(249,115,22,0.20);   --tone-orange:  #fdba74;
+  --tone-slate-soft:   rgba(148,163,184,0.20);  --tone-slate:   #cbd5e1;
+
+  --sh-1: 0 1px 2px rgba(0,0,0,0.5);
+  --sh-2: 0 4px 12px rgba(0,0,0,0.5);
+  --sh-3: 0 12px 32px rgba(0,0,0,0.6);
+}
+
+/* Follow OS setting when the user hasn't explicitly chosen. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+  }
+}

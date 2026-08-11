@@ -1,44 +1,29 @@
-import {
-  Card,
-  H1,
-  H2,
-  Paragraph,
-  UList,
-  ListItem,
-  VerticalLayout,
-  Anchor,
-  UIComponent,
-  Button,
-  Span,
-  HorizontalLayout,
-} from '../framework';
+import { El, UIComponent } from '../framework';
+import { PageHeader } from '../components/PageHeader';
+import { Section } from '../components/Section';
+import { BigButton } from '../components/BigButton';
+import { KeyValueRow } from '../components/KeyValueRow';
 import { OtaController } from '../controllers';
 
 export function AboutView(): UIComponent {
   const ota = OtaController.snapshot();
-
-  return VerticalLayout().add(
-    Card().add(
-      H1('About'),
-      Paragraph('Minimal typesafe fluent UI DSL for Capacitor apps.'),
-      H2('MVC layers'),
-      UList().add(
-        ListItem().add('framework/  — UIComponent, tags, Store, Router'),
-        ListItem().add('services/   — http, storage, db, ota (only I/O)'),
-        ListItem().add('controllers/— orchestrate services + store'),
-        ListItem().add('views/      — read state, call controllers'),
+  return El('div').cls('col').add(
+    PageHeader({ title: 'About', showBack: true }),
+    El('main').cls('app-main').add(
+      El('div').cls('card').add(
+        Section({ title: 'OTA / build' }),
+        KeyValueRow('Bundle', ota.version),
+        KeyValueRow('Platform', ota.platform),
+        KeyValueRow('Status', ota.statusMessage),
+        El('div').style({ height: '12px' }),
+        BigButton({
+          title: 'Check for update',
+          subtitle: 'Poll the OTA server now',
+          icon: 'refresh',
+          variant: 'primary',
+          onClick: () => OtaController.checkNow(),
+        }),
       ),
-    ),
-    Card().add(
-      H2('OTA'),
-      Paragraph(`Bundle version: ${ota.version}`),
-      Paragraph(`Platform: ${ota.platform}`),
-      Paragraph(`Status: ${ota.statusMessage}`),
-      HorizontalLayout().add(
-        Button('Check for update').onClick(() => OtaController.checkNow()),
-      ),
-      Span(''),
-      Paragraph('').add(Anchor('← Back to Home', '#/')),
     ),
   );
 }

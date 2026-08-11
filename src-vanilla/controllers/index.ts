@@ -1,2 +1,3 @@
-export { TaskController } from './TaskController';
 export { OtaController } from './OtaController';
+export { FeedController } from './FeedController';
+export { UiController } from './UiController';

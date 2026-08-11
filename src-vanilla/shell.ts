@@ -1,34 +1,27 @@
 /**
- * The "shell" — a persistent chrome (nav bar + content slot) that wraps every
- * routed view. Only the content slot is re-rendered per route change, so the
- * nav bar keeps its DOM state (no focus loss, no flicker).
+ * App shell — persistent chrome that lives across route changes.
+ *
+ * Layout:
+ *   <div.app-root>
+ *     <div id="content-slot"></div>   ← routed view goes here
+ *     <TabBar />                      ← persistent
+ *     <OtaOverlay />                  ← persistent, self-updating
+ *   </div>
  */
 
-import {
-  Anchor,
-  El,
-  UIComponent,
-  VerticalLayout,
-} from './framework';
+import { El } from './framework';
+import { TabBar } from './components/TabBar';
+import { OtaOverlay } from './views/OtaOverlay';
+import { i18n } from './i18n';
 
-export interface ShellRoute {
-  path: string;
-  label: string;
-}
+export function buildShell(): { rootEl: HTMLElement; slot: HTMLElement; onRoute: (path: string) => void } {
+  const root = El('div').cls('app-root');
+  const slot = El('div').style({ flex: '1', minHeight: '0', display: 'flex', flexDirection: 'column' });
 
-export function buildShell(routes: ShellRoute[], currentPath: string): {
-  root: UIComponent<'div'>;
-  slot: HTMLElement;
-} {
-  const nav = El('nav').cls('nav');
-  for (const r of routes) {
-    const link = Anchor(r.label, `#${r.path}`);
-    if (r.path === currentPath) link.cls('active');
-    nav.add(link);
-  }
+  const t = i18n.t.tab;
+  const bar = TabBar({ home: t.home, work: t.work, post: t.post, local: t.local, me: t.me });
 
-  const slot = El('main').cls('main');
-  const root = VerticalLayout().add(nav, slot);
+  root.add(slot, bar.root, OtaOverlay());
 
-  return { root, slot: slot.el };
+  return { rootEl: root.el, slot: slot.el, onRoute: bar.updateActive };
 }
