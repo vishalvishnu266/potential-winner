@@ -1,5 +1,6 @@
 export * from './dom';
 export * from './tags';
+export * from './html';
 export * from './store';
 export * from './router';
 export * from './icons';
