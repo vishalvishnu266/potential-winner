@@ -13,3 +13,5 @@ export { maps } from './maps';
 export type { MapPoint } from './maps';
 export { providersService } from './providers';
 export type { Provider } from './providers';
+export { locationService } from './location';
+export type { Coord, LocationPermission } from './location';

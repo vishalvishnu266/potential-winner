@@ -37,9 +37,12 @@ export function TabBar(labels: {
       El('span').cls('tab-ico').add(Icon(t.icon, { size: t.emphasise ? 22 : 26, strokeWidth: t.emphasise ? 2.4 : 1.9 })),
       t.emphasise ? null : El('span').text(t.label),
     );
+    // Haptic fires on every tap — even if it's the active tab — so users
+    // get consistent tactile feedback. Repeated taps on the active tab do
+    // nothing else (no navigate).
     btn.onClick(() => {
-      if (router.currentPath === t.path) return;
-      void haptics.selection();
+      if (router.currentPath === t.path) { void haptics.light(); return; }
+      void (t.emphasise ? haptics.medium() : haptics.selection());
       router.navigate(t.path);
     });
     btns.set(t.name, btn);

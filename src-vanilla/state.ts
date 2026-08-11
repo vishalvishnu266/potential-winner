@@ -6,6 +6,7 @@
 import { Store } from './framework';
 import type { CategoryKey } from './data/categories';
 import type { MockJob, Sponsor } from './data/mock';
+import type { Coord, LocationPermission } from './services/location';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type UiMode = 'findHelp' | 'findWork';
@@ -34,6 +35,10 @@ export interface AppState {
     sponsors: Sponsor[];
     loading: boolean;
   };
+  location: {
+    coord: Coord;
+    permission: LocationPermission;
+  };
 }
 
 export const appStore = new Store<AppState>({
@@ -45,6 +50,10 @@ export const appStore = new Store<AppState>({
     radiusKm: 5,
     categoryFilter: 'all',
   },
-  feed: { jobs: [], loading: false, error: null },
+  feed:  { jobs: [], loading: false, error: null },
   local: { sponsors: [], loading: false },
+  location: {
+    coord: { lat: 12.9716, lon: 77.5946, ts: 0 },
+    permission: 'prompt',
+  },
 });

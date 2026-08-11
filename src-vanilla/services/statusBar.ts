@@ -14,7 +14,7 @@ export const statusBarService = {
     if (!Capacitor.isNativePlatform()) return;
     await safe(() => StatusBar.setStyle({ style: mode === 'dark' ? Style.Dark : Style.Light }));
     await safe(() => StatusBar.setBackgroundColor({
-      color: mode === 'dark' ? '#0b1220' : '#ffffff',
+      color: mode === 'dark' ? '#000000' : '#ffffff',
     }));
   },
   async setOverlaysWebView(overlay: boolean): Promise<void> {

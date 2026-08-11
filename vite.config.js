@@ -21,6 +21,10 @@ function buildVersion() {
 const APP_VERSION = process.env.APP_VERSION || buildVersion()
 const OTA_HOST = process.env.OTA_HOST || '192.168.0.4'
 const OTA_PORT = Number(process.env.OTA_PORT || 3000)
+// Choose the deployment environment: 'mock' | 'dev' | 'prod'.
+// Defaults to 'mock' so `vite build` produces a self-contained UI you can
+// demo without any backend. Override with `APP_ENV=dev npm run build`.
+const APP_ENV = process.env.APP_ENV || 'mock'
 
 // Multi-entry:
 //  - `index.html`  → vanilla framework app (what the Capacitor app runs).
@@ -42,9 +46,10 @@ export default defineConfig({
     },
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),
-        __OTA_HOST__: JSON.stringify(OTA_HOST),
-        __OTA_PORT__: JSON.stringify(OTA_PORT),
+        __APP_ENV__:     JSON.stringify(APP_ENV),
+        __OTA_HOST__:    JSON.stringify(OTA_HOST),
+        __OTA_PORT__:    JSON.stringify(OTA_PORT),
     },
 })
 
-export { APP_VERSION, OTA_HOST, OTA_PORT }
+export { APP_VERSION, APP_ENV, OTA_HOST, OTA_PORT }

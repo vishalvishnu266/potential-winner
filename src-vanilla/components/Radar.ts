@@ -1,193 +1,231 @@
 /**
- * Radar canvas — pure DOM/Canvas, no React.
+ * Radar — full-screen static "point where you're facing" radar.
  *
- * Draws concentric range rings + a sweep + one dot per point. Auto-rotates
- * to keep the user's heading pointing up. Handles pointer taps and calls
- * back with the tapped point's id.
+ * Design decisions per product feedback:
+ *   - No spinning sweep. It's not a search animation; it's a map you read.
+ *   - The RADAR ROTATES with the phone's compass heading so North stays in
+ *     world-north, but the pips themselves DO NOT rotate — we counter-rotate
+ *     the icon inside each pip so the icon symbol stays upright regardless
+ *     of the phone's orientation.
+ *   - Fills the parent (which should be a full-screen container). No fixed
+ *     square size — uses `ResizeObserver` and 100%/100% canvas.
+ *   - HiDPI-aware. Repaints only when heading, points, or size actually
+ *     change (no rAF loop).
  *
- * Lifecycle:
- *   - Uses `UIComponent.onMount` to attach ResizeObserver + heading listener.
- *   - Returns a cleanup that detaches on `.dispose()`.
+ * Rendering strategy:
+ *   The circular canvas draws only rings + cardinal letters. Pips are
+ *   ordinary absolutely-positioned HTML buttons so we can render icons
+ *   crisply and keep tap targets ≥ 44 px. Pip positions are recomputed on
+ *   heading / size / points change.
  */
 
 import { El, UIComponent } from '../framework';
+import { Icon, IconName } from '../framework/icons';
 import { headingService } from '../services';
 
 export interface RadarPoint {
   id: string;
   distanceKm: number;
-  bearingDeg: number;   // 0..360, 0=north
-  tone: string;         // css var suffix (e.g. 'blue')
+  bearingDeg: number;   // 0..360, 0 = north
+  tone: string;
   label?: string;
+  icon?: IconName;
 }
 
 export interface RadarOptions {
   points: RadarPoint[];
   maxKm?: number;
   onSelect?: (id: string) => void;
-  height?: number;
+  /** Optional caption to show under the radar. */
+  caption?: string;
 }
 
 export function Radar(opts: RadarOptions): UIComponent<'div'> {
   const maxKm = opts.maxKm ?? 5;
+
+  // Full-screen container — expects parent to give it space.
   const wrap = El('div').style({
     position: 'relative',
     width: '100%',
-    height: (opts.height ?? 320) + 'px',
-    borderRadius: 'var(--r-3)',
-    background: 'var(--c-surface)',
-    boxShadow: 'var(--sh-1)',
+    height: '100%',
+    minHeight: '0',
+    background: 'var(--c-bg)',
     overflow: 'hidden',
     touchAction: 'manipulation',
   });
 
+  // Rings canvas (behind the pips).
   const canvas = document.createElement('canvas');
+  canvas.style.position = 'absolute';
+  canvas.style.inset = '0';
   canvas.style.width = '100%';
   canvas.style.height = '100%';
-  canvas.style.display = 'block';
   wrap.el.appendChild(canvas);
 
+  // Pip layer (in front).
+  const pipLayer = document.createElement('div');
+  pipLayer.style.cssText = 'position:absolute;inset:0;pointer-events:none;';
+  wrap.el.appendChild(pipLayer);
+
+  // Center "you-are-here" marker as an HTML element so it can carry the icon.
+  const me = document.createElement('div');
+  me.style.cssText = `
+    position:absolute;left:50%;top:50%;
+    width:22px;height:22px;transform:translate(-50%,-50%);
+    background:var(--c-primary);border:3px solid var(--c-surface);
+    border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.25);
+    z-index:2;
+  `;
+  wrap.el.appendChild(me);
+
+  // Caption at bottom
+  const caption = document.createElement('div');
+  caption.style.cssText = `
+    position:absolute;left:0;right:0;bottom:12px;
+    text-align:center;font-size:12px;color:var(--c-text-muted);
+    pointer-events:none;
+  `;
+  if (opts.caption) caption.textContent = opts.caption;
+  wrap.el.appendChild(caption);
+
   const ctx = canvas.getContext('2d')!;
-  let heading = 0;      // degrees
-  let sweep = 0;        // degrees (0..360)
-  let raf: number | null = null;
+  let heading = 0;
   let dpr = window.devicePixelRatio || 1;
   let size = { w: 320, h: 320 };
-  let dotPositions: Array<{ id: string; x: number; y: number; r: number }> = [];
+  const pipEls: HTMLButtonElement[] = [];
 
-  // ------ drawing ---------------------------------------------------------
-  const styleOfTone = (tone: string): string => {
-    // Resolve the CSS variable at draw-time so theme changes propagate.
-    return getComputedStyle(document.documentElement)
-      .getPropertyValue(`--tone-${tone}`).trim() || 'currentColor';
-  };
-  const textMuted  = (): string => getComputedStyle(document.documentElement).getPropertyValue('--c-text-muted').trim() || '#888';
-  const hairline   = (): string => getComputedStyle(document.documentElement).getPropertyValue('--c-hairline').trim() || 'rgba(0,0,0,.1)';
-  const primary    = (): string => getComputedStyle(document.documentElement).getPropertyValue('--c-primary').trim() || '#007aff';
+  const cssVar = (name: string): string =>
+    getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-  const draw = (): void => {
+  const drawRings = (): void => {
     const w = size.w, h = size.h;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-
     const cx = w / 2, cy = h / 2;
-    const radius = Math.min(w, h) / 2 - 12;
+    const radius = Math.min(w, h) / 2 - 40;
 
-    // Rings
-    ctx.strokeStyle = hairline();
+    ctx.strokeStyle = cssVar('--c-hairline') || 'rgba(0,0,0,.1)';
     ctx.lineWidth = 1;
     for (let i = 1; i <= 4; i++) {
       const r = (radius * i) / 4;
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
       ctx.stroke();
+      // Distance label on the east-side of each ring.
+      ctx.fillStyle = cssVar('--c-text-tertiary') || 'rgba(0,0,0,.3)';
+      ctx.font = '500 10px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      const km = ((maxKm * i) / 4).toFixed(1);
+      ctx.fillText(`${km} km`, cx + r + 4, cy);
     }
-    // Cross-hairs
+
+    // Cross-hairs (soft)
     ctx.beginPath();
     ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy);
     ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius);
     ctx.stroke();
 
-    // Cardinal labels rotated with heading
-    ctx.fillStyle = textMuted();
-    ctx.font = '600 11px -apple-system, BlinkMacSystemFont, sans-serif';
+    // Cardinal letters — rotate with heading so N stays true-north.
+    ctx.fillStyle = cssVar('--c-text-muted') || '#888';
+    ctx.font = '700 12px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const cardinals = [ ['N', 0], ['E', 90], ['S', 180], ['W', 270] ] as const;
-    for (const [label, deg] of cardinals) {
+    const cards = [
+      ['N', 0, cssVar('--c-primary')],
+      ['E', 90], ['S', 180], ['W', 270],
+    ] as const;
+    for (const c of cards) {
+      const [label, deg, color] = c as [string, number, string | undefined];
       const rad = ((deg - heading) - 90) * Math.PI / 180;
-      const rx = cx + Math.cos(rad) * (radius + 2);
-      const ry = cy + Math.sin(rad) * (radius + 2);
-      ctx.fillText(label as string, rx, ry);
+      const rx = cx + Math.cos(rad) * (radius + 20);
+      const ry = cy + Math.sin(rad) * (radius + 20);
+      ctx.fillStyle = color ?? (cssVar('--c-text-muted') || '#888');
+      ctx.fillText(label, rx, ry);
     }
+  };
 
-    // Sweep
-    const sr = ((sweep - heading) - 90) * Math.PI / 180;
-    const grad = ctx.createConicGradient ? ctx.createConicGradient(sr, cx, cy) : null;
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, radius, sr - 0.35, sr, false);
-    ctx.closePath();
-    ctx.fillStyle = primary() + '33';
-    ctx.fill();
-    ctx.restore();
-
-    // Points
-    dotPositions = [];
+  const positionPips = (): void => {
+    const w = size.w, h = size.h;
+    const cx = w / 2, cy = h / 2;
+    const radius = Math.min(w, h) / 2 - 40;
     const scale = radius / maxKm;
-    for (const p of opts.points) {
+    for (let i = 0; i < opts.points.length; i++) {
+      const p = opts.points[i];
+      const el = pipEls[i];
+      if (!el) continue;
       const clamped = Math.min(p.distanceKm, maxKm);
+      // Bearing minus heading rotates the ring so the phone-forward is "up".
       const rad = ((p.bearingDeg - heading) - 90) * Math.PI / 180;
       const x = cx + Math.cos(rad) * clamped * scale;
       const y = cy + Math.sin(rad) * clamped * scale;
-      const tone = styleOfTone(p.tone);
-      ctx.beginPath();
-      ctx.arc(x, y, 8, 0, Math.PI * 2);
-      ctx.fillStyle = tone;
-      ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-      dotPositions.push({ id: p.id, x, y, r: 14 });
+      el.style.left = `${x}px`;
+      el.style.top  = `${y}px`;
     }
-
-    // Center pin (you-are-here)
-    ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-    ctx.fillStyle = primary();
-    ctx.fill();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
   };
 
-  const tick = (): void => {
-    sweep = (sweep + 1.2) % 360;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    draw();
-    raf = requestAnimationFrame(tick);
+  const buildPips = (): void => {
+    pipLayer.replaceChildren();
+    pipEls.length = 0;
+    for (const p of opts.points) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('aria-label', p.label ?? p.id);
+      btn.style.cssText = `
+        position:absolute;left:0;top:0;
+        transform:translate(-50%,-50%);
+        width:36px;height:36px;border-radius:12px;
+        border:2px solid var(--c-surface);
+        background:var(--tone-${p.tone});color:#fff;
+        display:inline-flex;align-items:center;justify-content:center;
+        pointer-events:auto;
+        box-shadow:0 4px 12px rgba(0,0,0,.20);
+        transition:transform 120ms cubic-bezier(.22,1,.36,1);
+        touch-action:manipulation;
+      `;
+      // Inner span holds the icon — this stays upright regardless of the
+      // radar's rotation (we don't rotate pips, only the ring itself).
+      const iconWrap = El('span').style({
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      });
+      if (p.icon) iconWrap.add(Icon(p.icon, { size: 18 }));
+      else {
+        // Fallback = filled dot.
+        const dot = document.createElement('span');
+        dot.style.cssText = 'width:8px;height:8px;background:#fff;border-radius:999px;';
+        iconWrap.el.appendChild(dot);
+      }
+      btn.appendChild(iconWrap.el);
+      btn.addEventListener('click', () => opts.onSelect?.(p.id));
+      btn.addEventListener('touchstart', () => { btn.style.transform = 'translate(-50%,-50%) scale(.92)'; }, { passive: true });
+      btn.addEventListener('touchend',   () => { btn.style.transform = 'translate(-50%,-50%) scale(1)'; });
+      btn.addEventListener('touchcancel',() => { btn.style.transform = 'translate(-50%,-50%) scale(1)'; });
+      pipLayer.appendChild(btn);
+      pipEls.push(btn);
+    }
   };
 
   const resize = (): void => {
-    const rect = canvas.getBoundingClientRect();
+    const rect = wrap.el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
     dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+    canvas.width  = Math.max(1, Math.floor(rect.width  * dpr));
     canvas.height = Math.max(1, Math.floor(rect.height * dpr));
     size = { w: rect.width, h: rect.height };
+    render();
   };
 
-  // Tap handling
-  const onTap = (e: MouseEvent | TouchEvent): void => {
-    const rect = canvas.getBoundingClientRect();
-    const point = 'touches' in e && e.touches.length
-      ? { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top }
-      : { x: (e as MouseEvent).clientX - rect.left, y: (e as MouseEvent).clientY - rect.top };
-    // Find the closest hit within radius
-    let hit: string | null = null;
-    let best = Infinity;
-    for (const d of dotPositions) {
-      const dx = d.x - point.x, dy = d.y - point.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist <= d.r && dist < best) { best = dist; hit = d.id; }
-    }
-    if (hit && opts.onSelect) opts.onSelect(hit);
-  };
-  canvas.addEventListener('click', onTap);
+  const render = (): void => { drawRings(); positionPips(); };
 
-  // Lifecycle: resize + heading subscription
+  buildPips();
+
   wrap.onMount(() => {
     resize();
     const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-    const unsubHeading = headingService.subscribe((deg) => { heading = deg; });
-    tick();
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = null;
-      ro.disconnect();
-      unsubHeading();
-      canvas.removeEventListener('click', onTap);
-    };
+    ro.observe(wrap.el);
+    const unsubHeading = headingService.subscribe((deg) => {
+      heading = deg;
+      render();
+    });
+    return () => { ro.disconnect(); unsubHeading(); };
   });
 
   return wrap;

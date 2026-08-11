@@ -7,7 +7,7 @@ import { appStore } from './state';
 import { router } from './router';
 import { i18n } from './i18n';
 import { buildShell } from './shell';
-import { UiController, OtaController } from './controllers';
+import { UiController, OtaController, LocationController } from './controllers';
 import { statusBarService } from './services';
 
 import { HomeView } from './views/HomeView';
@@ -23,9 +23,10 @@ async function bootstrap(): Promise<void> {
   const host = document.getElementById('app');
   if (!host) throw new Error('#app root not found');
 
-  // 1. Hydrate persisted prefs + apply theme + status bar.
+  // 1. Hydrate persisted prefs + apply theme + status bar + location cache.
   await UiController.load();
   await statusBarService.setOverlaysWebView(false);
+  await LocationController.init();
 
   // 2. Mount persistent shell.
   const shell = buildShell();

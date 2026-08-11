@@ -18,9 +18,9 @@
   --c-hairline-2:    rgba(60, 60, 67, 0.08);
   --c-border:        rgba(60, 60, 67, 0.22);
 
-  --c-primary:       #007aff;   /* iOS blue */
-  --c-primary-2:     #0a6cdd;
-  --c-primary-soft:  rgba(0, 122, 255, 0.12);
+  --c-primary:       #16a34a;   /* DailyGig green */
+  --c-primary-2:     #128a3f;
+  --c-primary-soft:  rgba(22, 163, 74, 0.14);
   --c-danger:        #ff3b30;
   --c-danger-soft:   rgba(255, 59, 48, 0.12);
   --c-warning:       #ff9500;
@@ -108,9 +108,9 @@
   --c-hairline-2:    rgba(84, 84, 88, 0.35);
   --c-border:        rgba(84, 84, 88, 0.65);
 
-  --c-primary:       #0a84ff;
-  --c-primary-2:     #409cff;
-  --c-primary-soft:  rgba(10, 132, 255, 0.20);
+  --c-primary:       #22c55e;   /* DailyGig green (dark) */
+  --c-primary-2:     #16a34a;
+  --c-primary-soft:  rgba(34, 197, 94, 0.24);
   --c-danger:        #ff453a;
   --c-danger-soft:   rgba(255, 69, 58, 0.20);
   --c-warning:       #ff9f0a;

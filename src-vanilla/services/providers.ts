@@ -1,15 +1,11 @@
 /**
- * Providers directory — searchable, callable services near the user.
- *
- * This is the NEW surface: cab / auto / puncture / mechanic / cook / plumber
- * / electrician / cleaner / mover. Users can browse & call directly instead
- * of posting a job.
- *
- * Mock-backed today. Swap for `http.get('/api/providers')` when the backend
- * is ready — the shape and controller contract stay the same.
+ * Providers directory — env-aware.
+ * Mock in-memory today; real HTTP in dev/prod.
  */
 
 import type { CategoryKey } from '../data/categories';
+import { http } from './http';
+import { env } from '../env';
 
 export interface Provider {
   id: string;
@@ -19,10 +15,10 @@ export interface Provider {
   lat: number;
   lon: number;
   distanceKm: number;
-  rating: number;      // 0..5
+  rating: number;
   reviews: number;
   openNow: boolean;
-  eta?: string;        // "5 min", "under 10 min", etc.
+  eta?: string;
 }
 
 function mulberry32(seed: number) {
@@ -48,7 +44,6 @@ const NAMES: Record<CategoryKey, string[]> = {
   other:    ['Local Helpers'],
 };
 
-// A stable pool of demo phone numbers.
 const PHONES = [
   '+919000000001', '+919000000002', '+919000000003', '+919000000004',
   '+919000000005', '+919000000006', '+919000000007', '+919000000008',
@@ -56,23 +51,33 @@ const PHONES = [
 
 const CATS: CategoryKey[] = ['cab','auto','puncture','mechanic','cook','plumb','electric','clean','move','other'];
 
-function generate(lat: number, lon: number, seedSalt = 0): Provider[] {
-  const seed = Math.floor((lat + 90) * 1e4) ^ Math.floor((lon + 180) * 1e4) ^ seedSalt;
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+            Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+            Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function generateMock(lat: number, lon: number): Provider[] {
+  const seed = Math.floor((lat + 90) * 1e4) ^ Math.floor((lon + 180) * 1e4);
   const rng = mulberry32(seed);
   const list: Provider[] = [];
   for (const cat of CATS) {
     const names = NAMES[cat] ?? NAMES.other;
     const n = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
-      const km = +(0.2 + rng() * 9.8).toFixed(2);
+      const pLat = lat + (rng() - 0.5) * 0.1;
+      const pLon = lon + (rng() - 0.5) * 0.1;
+      const km = +haversineKm(lat, lon, pLat, pLon).toFixed(2);
       list.push({
         id: `${cat}-${i}-${seed}`,
         name: names[Math.floor(rng() * names.length)],
         category: cat,
         phone: PHONES[Math.floor(rng() * PHONES.length)],
-        lat: lat + (rng() - 0.5) * 0.1,
-        lon: lon + (rng() - 0.5) * 0.1,
-        distanceKm: km,
+        lat: pLat, lon: pLon, distanceKm: km,
         rating: +(3.5 + rng() * 1.5).toFixed(1),
         reviews: Math.floor(rng() * 400),
         openNow: rng() > 0.15,
@@ -85,15 +90,26 @@ function generate(lat: number, lon: number, seedSalt = 0): Provider[] {
 
 export const providersService = {
   async listNearby(
-    lat = 12.9716, lon = 77.5946, radiusKm = 5,
+    lat = 12.9716, lon = 77.5946, radiusKm = 10,
     category?: CategoryKey,
   ): Promise<Provider[]> {
-    let list = generate(lat, lon).filter((p) => p.distanceKm <= radiusKm);
-    if (category) list = list.filter((p) => p.category === category);
-    return list;
+    if (env.isMock()) {
+      let list = generateMock(lat, lon).filter((p) => p.distanceKm <= radiusKm);
+      if (category) list = list.filter((p) => p.category === category);
+      return list;
+    }
+    const q = new URLSearchParams({
+      lat: String(lat), lon: String(lon), r: String(radiusKm),
+    });
+    if (category) q.set('cat', category);
+    return http.get<Provider[]>(`${env.baseUrl()}/api/providers?${q.toString()}`);
   },
   async byId(id: string): Promise<Provider | null> {
-    const list = generate(12.9716, 77.5946);
-    return list.find((p) => p.id === id) ?? null;
+    if (env.isMock()) {
+      const list = generateMock(12.9716, 77.5946);
+      return list.find((p) => p.id === id) ?? null;
+    }
+    try { return await http.get<Provider>(`${env.baseUrl()}/api/providers/${encodeURIComponent(id)}`); }
+    catch { return null; }
   },
 };

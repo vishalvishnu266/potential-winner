@@ -430,10 +430,10 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
-  background: color-mix(in srgb, var(--c-surface) 78%, transparent);
-  backdrop-filter: saturate(180%) blur(28px);
-  -webkit-backdrop-filter: saturate(180%) blur(28px);
+  /* Solid surface (no translucency) as requested. */
+  background: var(--c-surface);
   border-top: 0.5px solid var(--c-hairline);
+  box-shadow: 0 -1px 0 var(--c-hairline-2);
 }
 .tabbar > button {
   border: 0;
