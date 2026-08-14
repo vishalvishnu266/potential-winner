@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------
-# DailyGig / TaskFinder — one-shot dev helper for macOS + zsh
+# TaskFinder — one-shot dev helper for macOS + zsh (React + Capacitor)
 # ------------------------------------------------------------------
 # Usage:
 #   ./scripts/dev.sh                # build + sync + OTA bundle (default)
 #   ./scripts/dev.sh run            # build + sync + install + launch on device/emulator
 #   ./scripts/dev.sh ota            # only build the OTA bundle (for hot-update)
-#   ./scripts/dev.sh sync           # only vue build + cap sync (no OTA, no run)
+#   ./scripts/dev.sh sync           # only web build + cap sync (no OTA, no run)
 #   ./scripts/dev.sh clean          # uninstall app + clear OTA cache + fresh sync
 #   ./scripts/dev.sh server         # start the Axum OTA server
 #   ./scripts/dev.sh doctor         # print environment & versions
@@ -139,7 +139,7 @@ is_server_up() {
 
 cmd_build_web() {
   ensure_ota_config
-  step "Building Vue app (OTA_HOST=$OTA_HOST OTA_PORT=$OTA_PORT)"
+  step "Building React app (OTA_HOST=$OTA_HOST OTA_PORT=$OTA_PORT)"
   npm run build
   ok "dist/ rebuilt"
 }
@@ -242,7 +242,7 @@ cmd_doctor() {
 
 usage() {
   cat <<EOF
-${BOLD}DailyGig dev script${RESET}
+${BOLD}TaskFinder dev script${RESET}
 
 Usage: ./scripts/dev.sh <command>
 

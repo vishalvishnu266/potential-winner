@@ -1,54 +1,38 @@
 {
-  "name": "task-finder",
+  "name": "task-platform",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "description": "Two-app platform: customer (post work / find cabs) + worker (freelancer & service-firm ops). Shares a Rust/Axum backend and OTA pipeline.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "android": "npm run build && npx cap sync android && npx cap run android",
-    "ios": "npm run build && npx cap sync ios && npx cap open ios",
-    "bundle:ota": "node scripts/build-bundle.mjs",
-    "server": "cd server && cargo run",
-    "seed": "node scripts/seed.mjs",
-    "seed:web": "npx --yes serve seed-web -l 5173"
-  },
-  "dependencies": {
-    "@capacitor-community/background-geolocation": "^1.2.26",
-    "@capacitor-community/sqlite": "^7.0.0",
-    "@capacitor/android": "^8.5.0",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/camera": "^8.0.0",
-    "@capacitor/core": "^8.5.0",
-    "@capacitor/device": "^8.0.0",
-    "@capacitor/filesystem": "^8.0.0",
-    "@capacitor/geolocation": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/ios": "^8.5.0",
-    "@capacitor/local-notifications": "^8.0.0",
-    "@capacitor/network": "^8.0.0",
-    "@capacitor/preferences": "^8.0.0",
-    "@capacitor/push-notifications": "^8.0.0",
-    "@capacitor/splash-screen": "^8.0.2",
-    "@capacitor/status-bar": "^8.0.0",
-    "@capawesome/capacitor-live-update": "^8.3.0",
-    "@capgo/capacitor-updater": "^8.51.3",
-    "jeep-sqlite": "^2.8.0",
-    "lucide-react": "^0.468.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^8.5.0",
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^6.0.5",
-    "tailwindcss": "^4.3.3",
-    "typescript": "^5.6.3",
-    "vite": "^8.2.0"
+    "dev:customer":         "npm run dev  --workspace @app/customer",
+    "dev:worker":           "npm run dev  --workspace @app/worker",
+    "dev:customer:real":    "npm run dev:real --workspace @app/customer",
+    "dev:worker:real":      "npm run dev:real --workspace @app/worker",
+
+    "build:customer":       "npm run build --workspace @app/customer",
+    "build:worker":         "npm run build --workspace @app/worker",
+    "build:customer:prod":  "npm run build:prod --workspace @app/customer",
+    "build:worker:prod":    "npm run build:prod --workspace @app/worker",
+    "build:all":            "npm run build:customer && npm run build:worker",
+
+    "typecheck":            "npm run typecheck --workspaces --if-present",
+
+    "android:customer":     "npm run android --workspace @app/customer",
+    "android:worker":       "npm run android --workspace @app/worker",
+    "ios:customer":         "npm run ios     --workspace @app/customer",
+    "ios:worker":           "npm run ios     --workspace @app/worker",
+
+    "bundle:ota:customer":  "npm run bundle:ota --workspace @app/customer",
+    "bundle:ota:worker":    "npm run bundle:ota --workspace @app/worker",
+
+    "server":               "cd server && cargo run",
+
+    "api:export":           "cd server && cargo run --bin export-openapi",
+    "api:codegen":          "npm run codegen --workspace @pkg/api-contracts",
+    "api:sync":             "npm run api:export && npm run api:codegen"
   }
 }

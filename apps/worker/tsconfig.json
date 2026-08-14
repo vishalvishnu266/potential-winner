@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@pkg/api-contracts":   ["packages/api-contracts/src"],
+      "@pkg/api-contracts/*": ["packages/api-contracts/src/*"],
+      "@pkg/i18n":            ["packages/i18n/src"],
+      "@pkg/i18n/*":          ["packages/i18n/src/*"],
+      "@pkg/native":          ["packages/native/src"],
+      "@pkg/native/*":        ["packages/native/src/*"],
+      "@pkg/ota":             ["packages/ota/src"],
+      "@pkg/ota/*":           ["packages/ota/src/*"],
+      "@pkg/theme":           ["packages/theme/src"],
+      "@pkg/theme/*":         ["packages/theme/src/*"],
+      "@pkg/ui":              ["packages/ui/src"],
+      "@pkg/ui/*":            ["packages/ui/src/*"]
+    }
+  },
+  "include": ["src", "../../packages/*/src"]
+}

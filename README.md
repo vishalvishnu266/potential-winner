@@ -1,324 +1,343 @@
-# DailyGig (TaskFinder)
+# Task Platform (monorepo)
 
-A mobile-only Vue 3 + Capacitor app where users can find day-to-day tasks and
-book rides near them. Ships with an **Axum-based OTA update server** so JS/CSS
-changes can be pushed to the running app without a Play Store release.
+Two Capacitor apps sharing one Rust/Axum backend and one OTA pipeline:
 
-- **Frontend:** Vue 3 + Vite + vue-router
-- **Native shell:** Capacitor 8 (Android + iOS)
-- **OTA:** `@capgo/capacitor-updater` + local Axum server
-- **Bottom tab bar:** Home · Tasks · Rides · Settings (OTA lives in Settings)
+| App                | Path             | Audience                                | Native `appId`               |
+|--------------------|------------------|-----------------------------------------|------------------------------|
+| **Customer**       | `apps/customer/` | End users posting work / finding cabs   | `com.yourcompany.taskfinder` |
+| **Worker**         | `apps/worker/`   | Freelancers & service firms (crew, ops) | `com.yourcompany.worker`     |
 
----
+This repo was recently converted from a single-app layout to an
+**npm workspaces** monorepo.  No new business logic has been added yet —
+`apps/worker` is currently a byte-for-byte copy of the customer shell so
+the two apps can diverge independently from a known-good baseline.
 
-## 1. Prerequisites
+## Stack (unchanged)
 
-| Tool | Why |
-|------|-----|
-| Node.js ≥ 18 | Vite + Capacitor CLI |
-| npm ≥ 9 | Package manager |
-| Rust + Cargo | Axum OTA server |
-| Android Studio | Emulator + APK builds |
-| `adb` on PATH | Device commands (`$ANDROID_HOME/platform-tools`) |
-| Xcode (Mac only) | iOS builds |
+- **Frontend:** React 18 + Vite + `react-router-dom` + Tailwind v4
+- **State:**    Zustand
+- **i18n:**     Custom, zero-dependency (English + Tamil)
+- **Native:**   Capacitor 8 (Android + iOS)
+- **OTA:**      `@capgo/capacitor-updater` + a tiny Axum Rust server
+- **Backend:**  Rust / Axum (OTA + health only, for now)
 
-Verify everything with:
+## Repo layout
 
-```zsh
-./scripts/dev.sh doctor
+```
+task-platform/
+├─ package.json                 ← npm workspaces root, orchestration scripts
+├─ tsconfig.base.json           ← shared TS compiler options
+│
+├─ apps/
+│  ├─ customer/                 ← the original app, moved here as-is
+│  │  ├─ package.json           name: @app/customer
+│  │  ├─ capacitor.config.json  appId: com.yourcompany.taskfinder
+│  │  ├─ vite.config.js
+│  │  ├─ tsconfig.json          extends ../../tsconfig.base.json
+│  │  ├─ index.html
+│  │  ├─ src/                   (App.tsx, router, pages, components, ...)
+│  │  ├─ public/
+│  │  ├─ android/               Capacitor-generated
+│  │  └─ ios/                   Capacitor-generated
+│  │
+│  └─ worker/                   ← new shell, mirror of customer
+│     ├─ package.json           name: @app/worker
+│     ├─ capacitor.config.json  appId: com.yourcompany.worker
+│     ├─ vite.config.js
+│     ├─ tsconfig.json          extends ../../tsconfig.base.json
+│     ├─ index.html
+│     ├─ src/                   (identical shell to customer)
+│     └─ public/
+│     (android/ & ios/ are NOT committed — run `npm run cap:add:android`
+│      and `npm run cap:add:ios` inside apps/worker to generate them)
+│
+├─ packages/                    ← shared code (single source of truth)
+│  ├─ theme/                    Tailwind v4 tokens + seven accent palettes
+│  ├─ native/                   Capacitor wrappers (storage, haptics, useTheme, useAccent, ...)
+│  ├─ i18n/                     generic createI18n({ bundles, defaultLocale })
+│  ├─ api-contracts/            generated typed client + configureApi + /mock subpath
+│  ├─ ota/                      configureOta, useOta, otaStore, UpdateOverlay (uses api.checkUpdate)
+│  ├─ ui/                       generic <TabBar />, more components to come
+│  └─ vite-config/              createAppConfig({ appName, appDir }) — one factory, both apps
+│
+├─ server/                      ← Rust/Axum backend (unchanged location)
+│  ├─ Cargo.toml
+│  ├─ migrations/
+│  └─ src/main.rs               ← now serves per-app OTA channels
+│
+├─ bundles/                     ← generated OTA bundles, per-app subfolders
+│  ├─ customer/                 latest.json + vX.zip
+│  └─ worker/                   latest.json + vX.zip
+│
+└─ scripts/
+   ├─ build-bundle.mjs          ← now takes --app=<customer|worker>
+   └─ dev.sh
 ```
 
----
+### Shared `packages/`
 
-## 2. First-time setup
+The app-agnostic shell has been extracted into workspace packages so
+`apps/customer` and `apps/worker` share a single source of truth:
 
-```zsh
-# Install JS deps
-npm install
+| Package              | What lives here                                                                | Consumers                     |
+|----------------------|---------------------------------------------------------------------------------|-------------------------------|
+| `@pkg/theme`         | Tailwind v4 tokens, dark/light surfaces, seven accent palettes (`style.css`).  | Both apps import in `main.tsx`|
+| `@pkg/native`        | Capacitor wrappers: `initNative`, `syncStatusBar`, `hapticTap`, `storage`, `useTheme`, `bootAccent`. | Both apps |
+| `@pkg/i18n`          | Generic `createI18n({ bundles, defaultLocale, localeMeta })` factory.          | Each app registers its own bundles |
+| `@pkg/api-contracts` | Generated typed client + `configureApi({ baseUrl })`, plus a `/mock` subpath that intercepts `fetch`. Source of truth: `openapi.json`. | Both apps |
+| `@pkg/ota`           | `configureOta({ appName })`, `otaClient`, `useOtaStore`, `useOta`, `UpdateOverlay`. Uses `api.checkUpdate` under the hood — no separate HTTP transport. | Both apps |
+| `@pkg/ui`            | Generic `<TabBar tabs={...} getTabForPath={...} />`.                            | Each app supplies its own tab list |
+| `@pkg/vite-config`   | `createAppConfig({ appName, appDir })` — React + Tailwind plugins, monorepo `fs.allow`, shared-package pre-bundling, `__APP_*__` compile-time globals, `APP_ACCENT` validation, `APP_VERSION` stamping. | Both `vite.config.js` files are now one-liners. |
 
-# Build the Vue app once so android/app/src/main/assets/public exists
-npm run build
+Apps consume packages via workspace name imports (`@pkg/native`,
+`@pkg/ota`, etc.). No build step is required — Vite reads the package
+TS sources directly. TypeScript path aliases in `tsconfig.base.json`
+plus the `optimizeDeps.include` list in each app's `vite.config.js`
+keep dev + typecheck happy.
 
-# Copy dist/ into the native Android project + install plugin sources
-npx cap sync android
+App-specific pieces stay per-app:
+
+- `apps/<app>/src/data/{types,api,mockApi,realApi}.ts` — each app owns its own `Api` (extending `BaseApi`) and its mock/real implementations. Swap chosen at build time via the `@api-impl` Vite alias, unchanged.
+- `apps/<app>/src/i18n/{en,ta,types}.ts` — each app owns its own message shape and translations.
+- `apps/<app>/src/components/TabBar.tsx` — thin app-flavoured wrapper over `@pkg/ui`'s `TabBar`.
+- `apps/<app>/src/{router,pages}/` — apps' route surface.
+
+## Install
+
+```bash
+npm install                      # installs both workspaces at once
 ```
 
-(Optional) make the helper script executable:
+npm workspaces hoists shared deps into the root `node_modules/`. Each
+app also gets a lightweight `node_modules/` symlink so tools that
+resolve from the app dir (Vite, Capacitor) still work.
 
-```zsh
-chmod +x ./scripts/dev.sh
-```
+## Common workflows
 
----
+All commands are runnable from the repo root:
 
-## 3. Everyday commands
+```bash
+# Dev servers (mock API)
+npm run dev:customer             # -> http://localhost:5173  (customer)
+npm run dev:worker               # -> http://localhost:5173  (worker)
 
-### Option A — one-shot helper script (recommended)
+# Dev against the real backend
+npm run dev:customer:real
+npm run dev:worker:real
 
-| What you want to do | Command |
-|---------------------|---------|
-| Rebuild Vue + copy into Android project | `./scripts/dev.sh sync` |
-| Build + install + launch on device/emulator | `./scripts/dev.sh run` |
-| Push a **hot OTA update** to a running app | `./scripts/dev.sh ota` |
-| Fix stuck / stale UI (uninstall + wipe OTA cache) | `./scripts/dev.sh clean` |
-| Start the Axum OTA server (:3000) | `./scripts/dev.sh server` |
-| Print env + device info | `./scripts/dev.sh doctor` |
-| Default (safe: sync + ota, no device touched) | `./scripts/dev.sh` |
+# Type-check every workspace
+npm run typecheck
 
-Add a shortcut to `~/.zshrc` if you like:
+# Prod builds
+npm run build:customer:prod
+npm run build:worker:prod
+npm run build:all
 
-```zsh
-alias dg='./scripts/dev.sh'
-# then use: dg run, dg ota, dg clean, ...
-```
+# Native (build + cap sync + run)
+npm run android:customer
+npm run android:worker
+npm run ios:customer
+npm run ios:worker
 
-### Option B — raw npm / npx commands
+# OTA bundles — written to bundles/<app>/
+npm run bundle:ota:customer
+npm run bundle:ota:worker
 
-```zsh
-# Run Vite in the browser (fast iteration, no Capacitor)
-npm run dev
-
-# Build production Vue assets into dist/
-npm run build
-
-# Preview the built dist/ locally
-npm run preview
-
-# Build a versioned OTA bundle (bundles/v<version>.zip + latest.json)
-npm run bundle:ota
-
-# Start the Axum OTA server on :3000
+# Rust OTA / health server
 npm run server
+```
 
-# Full mobile round-trip: build → sync → launch on Android
+Or run from inside an app directory as before:
+
+```bash
+cd apps/customer
+npm run dev
 npm run android
+npm run bundle:ota
 ```
 
-### Option C — raw Capacitor CLI
+## OTA — now per-app
 
-```zsh
-# Copy dist/ into android/app/src/main/assets/public
-npx cap copy android
-
-# Copy assets AND update plugin sources (use after changing Capacitor plugins)
-npx cap sync android
-
-# Install & launch on the connected device/emulator
-npx cap run android
-
-# Open the native project in Android Studio
-npx cap open android
-
-# Same commands for iOS
-npx cap sync ios
-npx cap run ios
-npx cap open ios
-```
-
----
-
-## 3.1 Physical phone over Wi-Fi (wireless debugging)
-
-By default the OTA client points at **`http://192.168.0.4:3000`** — the LAN
-IP of the machine running the Axum server. If your Mac has a different IP,
-override it at build time:
-
-```zsh
-# Find your Mac's LAN IP
-ipconfig getifaddr en0     # e.g. 192.168.1.42
-# or:
-./scripts/dev.sh doctor    # prints all LAN IPs
-
-# Rebuild + push OTA with that IP
-OTA_HOST=192.168.1.42 ./scripts/dev.sh sync
-OTA_HOST=192.168.1.42 ./scripts/dev.sh ota
-
-# Start the server bound to the same IP
-OTA_HOST=192.168.1.42 ./scripts/dev.sh server
-```
-
-Then on the phone (over `adb` wireless debugging):
-
-```zsh
-./scripts/dev.sh clean     # uninstall old build with baked-in IP
-./scripts/dev.sh run       # installs fresh APK on the phone
-```
-
-**Requirements for the phone to reach your Mac:**
-
-- Phone and Mac must be on the **same Wi-Fi** (not guest network)
-- No firewall blocking port `3000` on the Mac
-  (macOS: System Settings → Network → Firewall)
-- Mac's IP must be listed in `android/app/src/main/res/xml/network_security_config.xml`
-  (already includes `192.168.0.4` — add yours if different)
-
-Quick smoke test from your phone's browser:
+The Rust server accepts an `app` query parameter and reads
+`bundles/<app>/latest.json`:
 
 ```
-http://192.168.0.4:3000/health
+GET /api/check-update?app=customer&current=<installed-version>
+GET /api/check-update?app=worker&current=<installed-version>
 ```
 
-Should return `{"ok":true,...}`. If it doesn't, the phone can't reach the
-server — check Wi-Fi / firewall.
+Behaviour:
 
----
+- `?app=` is validated (`[A-Za-z0-9_-]{1,32}`) to prevent path traversal.
+- If omitted, defaults to `customer` for backwards compatibility with
+  the original single-app setup.
+- Bundles are served under `/bundles/<app>/vX.zip` (unchanged
+  `ServeDir` on `/bundles`, now with per-app subdirectories).
 
-## 4. Typical dev flow
+`scripts/build-bundle.mjs` mirrors this layout:
 
-Two terminals:
-
-```zsh
-# Terminal 1 — OTA server (leave running)
-./scripts/dev.sh server
-# or:  npm run server
+```bash
+node scripts/build-bundle.mjs --app=customer
+node scripts/build-bundle.mjs --app=worker
 ```
 
-```zsh
-# Terminal 2 — first install on the emulator
-./scripts/dev.sh run
-# or:  npm run android
-```
-
-Then edit Vue code and push a hot update **without closing the app**:
-
-```zsh
-./scripts/dev.sh ota
-# or:  npm run bundle:ota
-```
-
-The running app polls the server every 15 s and calls
-`CapacitorUpdater.reload()` when a new bundle is found. Users see a ~200 ms
-reload — no need to reopen the app.
-
----
-
-## 5. OTA update flow explained
-
-1. `npm run bundle:ota` builds `dist/` and zips it as
-   `bundles/v<version>.zip`, then writes `bundles/latest.json` with the
-   newest version + filename.
-2. The Axum server (`server/src/main.rs`) reads `latest.json` on every
-   `/api/check-update` request — **no need to restart the server after a new build**.
-3. The Vue app (`src/composables/useOta.ts`):
-   - Polls `/api/check-update` every 15 s while open
-   - Re-checks whenever the app resumes
-   - Downloads new bundles via `@capgo/capacitor-updater`
-   - Hot-reloads the WebView with `CapacitorUpdater.reload()`
-4. The **Settings tab** also has a manual **Check for updates** button.
-
----
-
-## 6. Project layout
+Output:
 
 ```
-task-finder/
-├─ src/
-│  ├─ App.vue              # Shell with <router-view/> + <TabBar/>
-│  ├─ main.js
-│  ├─ style.css            # Mobile-first global styles
-│  ├─ router/index.ts      # 4 tab routes
-│  ├─ components/
-│  │  ├─ TabBar.vue        # Bottom navigation
-│  │  └─ PageHeader.vue
-│  ├─ composables/
-│  │  ├─ useOta.ts         # OTA polling + download + reload
-│  │  └─ useNative.ts      # StatusBar / SplashScreen / Haptics
-│  └─ pages/
-│     ├─ HomePage.vue
-│     ├─ TasksPage.vue
-│     ├─ RidesPage.vue
-│     └─ SettingsPage.vue  # OTA "Check for updates" lives here
-├─ server/                 # Axum OTA server (Rust)
-│  └─ src/main.rs
-├─ scripts/
-│  ├─ dev.sh               # Zsh helper (run, sync, ota, clean, server, doctor)
-│  └─ build-bundle.mjs     # Versioned OTA bundle builder
-├─ bundles/                # Generated OTA .zip files + latest.json
-├─ android/                # Capacitor native Android project
-├─ ios/                    # Capacitor native iOS project
-├─ dist/                   # Vite build output
-├─ capacitor.config.json
-├─ vite.config.js
-└─ package.json
+bundles/
+  customer/
+    latest.json
+    v0.0.0-20260814T120500.zip
+  worker/
+    latest.json
+    v0.0.0-20260814T120530.zip
 ```
 
----
+> **Note on the client side:** the client-side OTA call in
+> `apps/customer/src/data/realApi.ts` currently hits
+> `/api/check-update?current=...` — no `app=` param.  The server still
+> serves the customer bundle correctly because `customer` is the
+> default.  Once the worker app starts using OTA, pass `?app=worker`
+> from `apps/worker/src/data/realApi.ts` (single-line change).
 
-## 7. Troubleshooting
+## API — spec-first, codegen everywhere
 
-### "I pressed ▶ in Android Studio but my Vue changes aren't showing"
+The Rust server is the single source of truth for the HTTP contract.
+Handlers and DTOs are decorated with `utoipa`, producing an OpenAPI 3.1
+spec that drives both the interactive docs UI and the TypeScript
+client.
 
-Android Studio only rebuilds the APK. It does **not** rebuild Vue or copy
-`dist/` into the Android project. Always run this first:
-
-```zsh
-./scripts/dev.sh sync     # or: npm run build && npx cap sync android
+```
+server/src/api.rs                                         (Rust — hand-written)
+     │  #[utoipa::path(...)] on each handler,
+     │  #[derive(ToSchema)] on each DTO
+     ▼
+GET /api-docs/openapi.json     ─┐
+GET /docs (Scalar UI)           │  served at runtime by the Rust server
+                                │
+cargo run --bin export-openapi ─┘
+     │  writes deterministic JSON
+     ▼
+packages/api-contracts/openapi.json                       (committed)
+     │
+npm run api:codegen  (@hey-api/openapi-ts)
+     ▼
+packages/api-contracts/src/generated/                     (git-ignored *.gen.ts)
+     │  types.gen.ts   — request/response TS types
+     │  services.gen.ts — one typed function per endpoint
+     │  schemas.gen.ts  — runtime schema objects
+     ▼
+apps/{customer,worker}/src/data/api.ts  re-exports it
 ```
 
-Then press ▶.
+### The workflow — three commands total
 
-### "Old UI is still stuck even after `sync`"
-
-A previously downloaded OTA bundle is cached inside the app. Nuke it:
-
-```zsh
-./scripts/dev.sh clean
-# Then reinstall:
-./scripts/dev.sh run
+```bash
+npm run api:export         # Rust → openapi.json
+npm run api:codegen        # openapi.json → TS client + types
+npm run api:sync           # both, in order (use this)
 ```
 
-Equivalent manual steps:
+Add a new endpoint:
 
-```zsh
-adb uninstall com.yourcompany.taskfinder
-npm run build
-npx cap sync android
-npx cap run android
+1. Add the Rust handler + `#[derive(ToSchema)]` DTO + `#[utoipa::path(...)]` in `server/src/api.rs`.
+2. Register the route in `api::router()` (one line: `.routes(routes!(my_handler))`).
+3. From the repo root: `npm run api:sync`.
+4. `api.myHandler({...})` is now callable and fully typed in both apps.
+
+### Calling the API
+
+```ts
+import { api, configureApi } from '@pkg/api-contracts';
+
+// Done once at boot in main.tsx:
+configureApi({ baseUrl: 'http://192.168.0.4:3000' });
+
+// Everywhere else, from any component/hook/effect:
+const { ok }       = await api.health();
+const { available, url, version } = await api.checkUpdate({
+    query: { current: 'v0.1', app: 'customer' },
+});
 ```
 
-### Manifest merger / "permissive app" error in Android Studio
+Requests + responses are typed end-to-end.  Change a Rust `#[derive(ToSchema)]` DTO and `tsc --noEmit` will pinpoint every affected call site.
 
-The manifest and `network_security_config.xml` were fixed to allow cleartext
-HTTP to `10.0.2.2` (host machine as seen from the emulator). If you edit
-`AndroidManifest.xml` again, keep every attribute **inside** the
-`<application ...>` tag (before its closing `>`).
+### Mocks — automatic, per-endpoint override
 
-### The OTA server says "No bundles found"
+When `APP_ENV=mock` (the default for `npm run dev:*`), the app installs a
+tiny client-level fetch adapter that intercepts every generated request.
+Default responses are synthesised from the OpenAPI `example` values, so
+**every endpoint has a working mock the moment it's defined** — no
+duplicate hand-written mock file to maintain.
 
-Run `./scripts/dev.sh ota` (or `npm run bundle:ota`) at least once so
-`bundles/latest.json` exists.
+Override any specific endpoint from your app:
 
-### Fresh Android Studio checkout — Gradle failing to sync
+```ts
+import { mockOverride } from '@pkg/api-contracts/mock';
 
-Run once from the repo root:
-
-```zsh
-npm install
-npm run build
-npx cap sync android
+mockOverride('check_update', () =>
+    new Response(JSON.stringify({
+        available: true,
+        version: '9.9.9',
+        url: 'http://mock/bundle.zip',
+    }), { status: 200, headers: { 'content-type': 'application/json' } }),
+);
 ```
 
-…then reopen the `android/` folder in Android Studio.
+There is no service worker — the adapter is installed via
+`configureApi({ fetch: mockFetch })`, so it works inside a Capacitor
+WebView with zero setup.
 
----
+### Docs UI
 
-## 8. Store review notes
+While the Rust server is running:
 
-- OTA updates are allowed by Apple as long as they don't add features that
-  weren't part of the reviewed app scope.
-- The 4 tabs + native chrome (status bar, haptics, splash screen) satisfy
-  Apple's "minimum functionality" and "Safari wrapper" guidelines.
-- **Production** must use HTTPS. `10.0.2.2` cleartext is dev-only —
-  swap `PUBLIC_BASE_URL` in `server/src/main.rs` before shipping.
+- `http://localhost:3000/docs`                — Scalar interactive docs
+- `http://localhost:3000/api-docs/openapi.json` — the raw spec
 
----
+## Adding a feature (checklist)
 
-## 9. App metadata
+**Per-app (customer OR worker only):**
 
-| Field | Value |
-|-------|-------|
-| App ID | `com.yourcompany.taskfinder` |
-| App name | `TaskFinder` (branded `DailyGig`) |
-| Web dir | `dist` |
-| OTA server port | `3000` |
-| Emulator host URL | `http://10.0.2.2:3000` |
+1. Add the endpoint to `server/src/api.rs` (Rust — see "API workflow" above).
+2. Run `npm run api:sync` from the repo root.
+3. Call `api.myEndpoint({...})` from `apps/<app>/src/data/api.ts` or directly from your component.
+4. Add i18n keys to `apps/<app>/src/i18n/types.ts` and translate in `en.ts` + `ta.ts`.
+5. Add a new route in `apps/<app>/src/router/index.tsx` and (optionally) a tab in `apps/<app>/src/components/TabBar.tsx`.
+
+**Cross-cutting concerns (shared code):**
+
+- **UI primitive** used identically in both apps → add to `@pkg/ui` (presentation-only + generic).
+- **Native side-effect** (permissions, plugin wrapper) → add to `@pkg/native`.
+- **New i18n key that both apps need** → for now, add to each app's `i18n/types.ts` (their `Messages` shapes are per-app so they can diverge). If a truly shared string emerges, we can lift a `SharedMessages` type into `@pkg/i18n`.
+- **Anything the API returns** → already shared — it lives in `@pkg/api-contracts/src/generated/`, regenerated from Rust.
+
+## Install & run
+
+The old lockfile under `apps/customer/` was deleted as part of the extraction — the root workspace hoists everything now:
+
+```bash
+npm install                      # from repo root, installs all workspaces
+npm run dev:customer             # -> http://localhost:5173
+npm run dev:worker               # -> http://localhost:5173  (stop customer first)
+```
+
+## Migration notes (what changed in this pivot)
+
+- All previously top-level app files (`src/`, `android/`, `ios/`,
+  `public/`, `index.html`, `vite.config.js`, `tsconfig.json`,
+  `capacitor.config.json`, `package.json`, `package-lock.json`) now live
+  under `apps/customer/`.
+- Root `package.json` declares npm workspaces: `apps/*`, `packages/*`.
+- Root `tsconfig.base.json` holds the shared compiler config; each app's
+  `tsconfig.json` extends it.
+- `scripts/build-bundle.mjs` now requires `--app=<name>` and writes to
+  `bundles/<app>/` instead of `bundles/`.
+- `server/src/main.rs::check_update` reads per-app manifests and returns
+  per-app URLs.
+- `apps/worker/` is a fresh copy of the customer shell with a distinct
+  `appId` (`com.yourcompany.worker`) and no native `android/`/`ios/`
+  folders yet (regenerate with `npx cap add android|ios`).
+
+No product/business logic (jobs, cabs, sponsors, ERP, AI agents) has
+been introduced by this conversion — that lands in follow-up commits.

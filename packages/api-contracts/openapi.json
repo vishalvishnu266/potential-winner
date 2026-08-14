@@ -1,0 +1,91 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Task Platform API",
+    "description": "Shared HTTP surface for the customer + worker apps.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/check-update": {
+      "get": {
+        "tags": ["ota"],
+        "operationId": "check_update",
+        "summary": "Report whether the running app should download a newer OTA bundle.",
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "description": "Version the client currently has installed.",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "app",
+            "in": "query",
+            "required": false,
+            "description": "App id — `customer` or `worker`. Defaults to `customer`.",
+            "schema": { "type": "string", "example": "customer" }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "description": "Reserved for future release channels.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTA status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CheckUpdateResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "health",
+        "summary": "Liveness probe.",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CheckUpdateResponse": {
+        "type": "object",
+        "required": ["available"],
+        "properties": {
+          "available": { "type": "boolean", "example": false },
+          "version":   { "type": ["string", "null"], "example": null },
+          "url":       { "type": ["string", "null"], "example": null }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": {
+          "ok": { "type": "boolean", "example": true }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "ota",    "description": "OTA hot-update endpoints" },
+    { "name": "health", "description": "Liveness / readiness" }
+  ]
+}

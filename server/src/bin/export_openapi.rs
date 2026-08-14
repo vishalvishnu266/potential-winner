@@ -1,0 +1,57 @@
+//! Dump the OpenAPI JSON to disk so the TS side can codegen a client
+//! without needing the server to be running.
+//!
+//! Writes to `packages/api-contracts/openapi.json` by default.  Override
+//! with:
+//!
+//!     cargo run --bin export-openapi -- --out ../packages/api-contracts/openapi.json
+//!
+//! Typical use from the repo root:
+//!
+//!     npm run api:export      # cargo run --bin export-openapi
+//!     npm run api:codegen     # openapi codegen
+//!     npm run api:sync        # both
+
+// The binary lives inside the same crate as the server library.  Re-declare
+// the `api` module so this binary can reach `ApiDoc` without needing a
+// dedicated `lib.rs`.
+#[path = "../api.rs"]
+mod api;
+
+use std::path::PathBuf;
+use utoipa::OpenApi;
+
+fn main() -> anyhow::Result<()> {
+    // Default output path relative to `server/`, resolving to
+    // `<repo>/packages/api-contracts/openapi.json`.
+    let mut out = PathBuf::from("../packages/api-contracts/openapi.json");
+
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        match a.as_str() {
+            "-o" | "--out" => {
+                if let Some(p) = args.next() {
+                    out = PathBuf::from(p);
+                }
+            }
+            "-h" | "--help" => {
+                eprintln!("Usage: export-openapi [--out PATH]");
+                return Ok(());
+            }
+            _ => {
+                eprintln!("Unknown argument: {a}");
+                std::process::exit(2);
+            }
+        }
+    }
+
+    let doc = api::ApiDoc::openapi();
+    let json = doc.to_pretty_json()?;
+
+    if let Some(parent) = out.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&out, json)?;
+    eprintln!("[export-openapi] wrote {}", out.display());
+    Ok(())
+}

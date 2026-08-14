@@ -3,6 +3,13 @@ name = "server"
 version = "0.1.0"
 edition = "2024"
 
+# The main axum server binary is `src/main.rs` (auto-detected).
+# A second binary exports the OpenAPI JSON to the shared TS package
+# so the frontend can codegen a typed client without a running server.
+[[bin]]
+name = "export-openapi"
+path = "src/bin/export_openapi.rs"
+
 [dependencies]
 
 # --- HTTP ---
@@ -15,15 +22,16 @@ http = "1"
 # --- Data ---
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sqlx = { version = "0.8", default-features = false, features = [
-  "runtime-tokio",
-  "sqlite",
-  "macros",
-  "migrate",
-] }
+
+# --- OpenAPI / docs ---
+# `utoipa` provides the derive macros; `utoipa-axum` glues it into axum's
+# `Router` so registering a route also registers it in the OpenAPI doc.
+# `utoipa-scalar` serves a modern interactive docs UI at /docs.
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-axum = "0.1"
+utoipa-scalar = { version = "0.2", features = ["axum"] }
 
 # --- Misc ---
-uuid = { version = "1", features = ["v4"] }
 anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
