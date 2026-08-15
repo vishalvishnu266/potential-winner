@@ -118,25 +118,32 @@ npm workspaces hoists shared deps into the root `node_modules/`. Each
 app also gets a lightweight `node_modules/` symlink so tools that
 resolve from the app dir (Vite, Capacitor) still work.
 
-The root `postinstall` script runs `npm run api:sync`, which
+The root `postinstall` script runs `npm run api:codegen`, which
 regenerates `packages/api-contracts/src/generated/*.gen.ts` from the
-Rust `#[utoipa]` decorations.  These files are **git-ignored** — the
-Rust source is the only committed source of truth for the HTTP
-contract.  If your machine lacks a Rust toolchain the postinstall
-prints a warning and continues; run `npm run api:sync` manually
-before your first typecheck / build.
+**committed** `packages/api-contracts/openapi.json`.  These generated
+files are git-ignored — the OpenAPI JSON is the committed source of
+truth.  No Rust toolchain is needed to develop the frontend.
+
+When you *edit the Rust API* (add/change a handler or DTO), run
+`npm run api:sync` — that first regenerates `openapi.json` from the
+Rust `#[utoipa]` decorations (via `cargo run --bin export-openapi`),
+then runs `api:codegen`.  Commit the updated `openapi.json` along
+with your Rust change so everyone else's `postinstall` picks it up
+automatically.
 
 ## Common workflows
 
 All commands are runnable from the repo root:
 
 ```bash
-# Rust OTA / health server (start this first — every dev build hits it)
-npm run server
+# ONE command runs everything — Rust backend + both dev web apps in one terminal.
+# Ctrl+C once to kill everything.
+npm run dev
 
-# Dev servers (hit the real Rust backend)
-npm run dev:customer             # -> http://localhost:5173  (customer)
-npm run dev:worker               # -> http://localhost:5173  (worker)
+# ── Or run pieces individually ──
+npm run server                   # Rust OTA / health server only
+npm run dev:customer             # -> http://localhost:5173  (customer web app)
+npm run dev:worker               # -> http://localhost:5173  (worker web app)
 
 # Type-check every workspace
 npm run typecheck

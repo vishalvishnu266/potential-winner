@@ -8,18 +8,19 @@
     "packages/*"
   ],
   "scripts": {
-    "//dev": "── Dev servers — start `npm run server` first in another terminal ──",
+    "//dev": "── ONE command runs everything: Rust server + both dev web apps ──",
+    "dev":                  "concurrently -n server,customer,worker -c cyan,magenta,yellow \"npm:server\" \"npm:dev:customer\" \"npm:dev:worker\"",
     "dev:customer":         "npm run dev --workspace @app/customer",
     "dev:worker":           "npm run dev --workspace @app/worker",
 
-    "//server": "── Rust backend ──",
+    "//server": "── Rust backend on its own (no web apps) ──",
     "server":               "cd server && cargo run --bin server",
 
-    "//api": "── OpenAPI sync — postinstall runs this automatically ──",
+    "//api": "── OpenAPI sync — postinstall always runs `api:codegen` from committed openapi.json ──",
     "api:export":           "cd server && cargo run --bin export-openapi",
     "api:codegen":          "npm run codegen --workspace @pkg/api-contracts",
     "api:sync":             "npm run api:export && npm run api:codegen",
-    "postinstall":          "npm run api:sync --if-present || echo 'api:sync skipped (Rust unavailable) — run manually before typecheck'",
+    "postinstall":          "npm run api:codegen",
 
     "//build": "── Typecheck + build (fans out to every workspace) ──",
     "typecheck":            "npm run typecheck --workspaces --if-present",
@@ -39,6 +40,7 @@
     "release:ota":          "npm run api:sync && npm run bundle:ota:prod --workspaces --if-present"
   },
   "devDependencies": {
+    "concurrently": "^9.0.1",
     "cross-env": "^7.0.3"
   }
 }

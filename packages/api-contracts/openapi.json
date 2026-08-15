@@ -3,66 +3,105 @@
   "info": {
     "title": "Task Platform API",
     "description": "Shared HTTP surface for the customer + worker apps.",
-    "license": {
-      "name": ""
-    },
     "version": "0.1.0"
   },
-  "paths": {},
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["health"],
+        "summary": "Liveness probe.",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Server is up",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/check-update": {
+      "get": {
+        "tags": ["ota"],
+        "summary": "Report whether the running app should download a newer OTA bundle.",
+        "operationId": "check_update",
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "description": "Version the client currently has installed.",
+            "schema": { "type": "string", "nullable": true }
+          },
+          {
+            "name": "app",
+            "in": "query",
+            "required": false,
+            "description": "App id — customer or worker. Defaults to customer.",
+            "schema": { "type": "string", "nullable": true }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "description": "Reserved for future release channels.",
+            "schema": { "type": "string", "nullable": true }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OTA status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CheckUpdateResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
     "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["ok"],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Liveness flag — always true when the server is up.",
+            "example": true
+          }
+        }
+      },
       "CheckUpdateResponse": {
         "type": "object",
-        "required": [
-          "available"
-        ],
+        "required": ["available"],
         "properties": {
           "available": {
             "type": "boolean",
             "description": "True if a newer bundle is available for download.",
             "example": true
           },
-          "url": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Absolute URL of the bundle zip, or null when no update is available.",
-            "example": "http://192.168.0.4:3000/bundles/customer/v0.0.0-20260814T120500.zip"
-          },
           "version": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "The newest bundle version on the server, or null if none exists.",
             "example": "0.0.0-20260814T120500"
-          }
-        }
-      },
-      "HealthResponse": {
-        "type": "object",
-        "required": [
-          "ok"
-        ],
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "description": "Liveness flag — always `true` when the server is up.",
-            "example": true
+          },
+          "url": {
+            "type": ["string", "null"],
+            "description": "Absolute URL of the bundle zip, or null when no update is available.",
+            "example": "http://localhost:3000/bundles/customer/v0.0.0-20260814T120500.zip"
           }
         }
       }
     }
   },
   "tags": [
-    {
-      "name": "ota",
-      "description": "OTA hot-update endpoints"
-    },
-    {
-      "name": "health",
-      "description": "Liveness / readiness"
-    }
+    { "name": "ota",    "description": "OTA hot-update endpoints" },
+    { "name": "health", "description": "Liveness / readiness" }
   ]
 }
