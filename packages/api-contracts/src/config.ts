@@ -1,12 +1,14 @@
 /**
  * Runtime API config — set once per app at boot, applied to the
- * generated `@hey-api/client-fetch` client.
+ * `@hey-api/client-fetch` client used by every generated service function.
  *
- * The generated client exports a shared singleton `client` from
- * `./generated`.  We forward the config there so every generated
- * service function picks it up without needing to pass `client` through.
+ * We import `client` directly from `@hey-api/client-fetch` rather than
+ * from `./generated`, because the codegen output shape changed across
+ * `@hey-api/openapi-ts` versions.  The generator wires its service
+ * functions to *this same shared client instance* automatically, so
+ * configuring it here propagates to every `api.foo({...})` call.
  */
-import { client } from './generated';
+import { client } from '@hey-api/client-fetch';
 
 export interface ApiConfig {
     /** Base URL of the API server, e.g. `http://192.168.0.4:3000`. */
