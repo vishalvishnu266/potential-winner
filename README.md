@@ -48,8 +48,8 @@ task-platform/
 │     ├─ index.html
 │     ├─ src/                   (identical shell to customer)
 │     └─ public/
-│     (android/ & ios/ are NOT committed — run `npm run cap:add:android`
-│      and `npm run cap:add:ios` inside apps/worker to generate them)
+│     (android/ & ios/ are NOT committed — run `npx cap add android`
+│      and `npx cap add ios` inside apps/worker to generate them)
 │
 ├─ packages/                    ← shared code (single source of truth)
 │  ├─ theme/                    Tailwind v4 tokens + fixed emerald brand palette
@@ -60,10 +60,16 @@ task-platform/
 │  ├─ ui/                       generic <TabBar />, more components to come
 │  └─ vite-config/              createAppConfig({ appName, appDir }) — one factory, both apps
 │
-├─ server/                      ← Rust/Axum backend (unchanged location)
+├─ server/                      ← Rust/Axum backend
 │  ├─ Cargo.toml
-│  ├─ migrations/
-│  └─ src/main.rs               ← now serves per-app OTA channels
+│  └─ src/
+│     ├─ main.rs                ← bind + serve + tracing init
+│     ├─ config.rs              ← env-driven constants
+│     ├─ openapi.rs             ← ApiDoc (top-level OpenAPI spec)
+│     ├─ routes.rs              ← URL → handler wiring
+│     ├─ handlers/              ← one file per resource (health, ota, ...)
+│     ├─ middleware/            ← cors, tracing, request-id
+│     └─ bin/export_openapi.rs  ← dumps openapi.json for TS codegen
 │
 ├─ bundles/                     ← generated OTA bundles, per-app subfolders
 │  ├─ customer/                 latest.json + vX.zip
@@ -135,10 +141,10 @@ npm run dev:worker               # -> http://localhost:5173  (worker)
 # Type-check every workspace
 npm run typecheck
 
-# Prod builds
-npm run build:customer:prod
-npm run build:worker:prod
-npm run build:all
+# Builds — fan out to every workspace automatically
+npm run build                    # dev-flavoured build for every app
+npm run build:prod               # prod-flavoured build for every app
+npm run verify                   # typecheck + build (pre-commit / CI)
 
 # Native (build + cap sync + run)
 npm run android:customer
@@ -152,9 +158,10 @@ npm run release:ota:customer     # customer only
 npm run release:ota:worker       # worker only
 npm run release:ota              # both apps
 
-# Lower-level OTA bundling (skips api:sync — assumes stubs are current)
-npm run bundle:ota:customer
-npm run bundle:ota:worker
+# Lower-level OTA bundling (skips api:sync — assumes stubs are current).
+# Runs from inside the app dir:
+cd apps/customer && npm run bundle:ota
+cd apps/worker   && npm run bundle:ota
 ```
 
 Or run from inside an app directory as before:
@@ -217,9 +224,10 @@ spec that drives both the interactive docs UI and the TypeScript
 client.
 
 ```
-server/src/api.rs                                         (Rust — hand-written)
+server/src/handlers/*.rs                                  (Rust — hand-written)
      │  #[utoipa::path(...)] on each handler,
-     │  #[derive(ToSchema)] on each DTO
+     │  #[derive(ToSchema)] on each DTO,
+     │  wired in server/src/routes.rs
      ▼
 GET /api-docs/openapi.json     ─┐
 GET /docs (Scalar UI)           │  served at runtime by the Rust server
@@ -249,10 +257,12 @@ npm run api:sync           # both, in order (use this)
 
 Add a new endpoint:
 
-1. Add the Rust handler + `#[derive(ToSchema)]` DTO + `#[utoipa::path(...)]` in `server/src/api.rs`.
-2. Register the route in `api::router()` (one line: `.routes(routes!(my_handler))`).
-3. From the repo root: `npm run api:sync`.
-4. `api.myHandler({...})` is now callable and fully typed in both apps.
+1. Add a new file in `server/src/handlers/<resource>.rs` with the handler, `#[derive(ToSchema)]` DTOs, and `#[utoipa::path(...)]`.
+2. Register the module: `pub mod <resource>;` in `server/src/handlers/mod.rs`.
+3. Wire the route: one line in `server/src/routes.rs` — `.routes(routes!(handlers::<resource>::<handler>))`.
+4. If the DTO isn't reachable from an existing handler, add it to `components(schemas(...))` in `server/src/openapi.rs`.
+5. From the repo root: `npm run api:sync`.
+6. `api.myHandler({...})` is now callable and fully typed in both apps.
 
 ### Calling the API
 
@@ -295,7 +305,7 @@ While the Rust server is running:
 
 **Per-app (customer OR worker only):**
 
-1. Add the endpoint to `server/src/api.rs` (Rust — see "API workflow" above).
+1. Add the endpoint under `server/src/handlers/` (Rust — see "API workflow" above).
 2. Run `npm run api:sync` from the repo root.
 3. Call `api.myEndpoint({...})` directly from your component or hook (`import { api } from '@pkg/api-contracts'`).
 4. Add i18n keys to `apps/<app>/src/i18n/types.ts` and translate in `en.ts` + `ta.ts`.

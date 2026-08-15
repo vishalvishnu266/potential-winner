@@ -8,37 +8,34 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:customer":            "npm run dev  --workspace @app/customer",
-    "dev:worker":              "npm run dev  --workspace @app/worker",
+    "//dev": "── Dev servers — start `npm run server` first in another terminal ──",
+    "dev:customer":         "npm run dev --workspace @app/customer",
+    "dev:worker":           "npm run dev --workspace @app/worker",
 
-    "build:customer":          "npm run build --workspace @app/customer",
-    "build:worker":            "npm run build --workspace @app/worker",
-    "build:customer:prod":     "npm run build:prod --workspace @app/customer",
-    "build:worker:prod":       "npm run build:prod --workspace @app/worker",
-    "build:all":               "npm run build:customer && npm run build:worker",
+    "//server": "── Rust backend ──",
+    "server":               "cd server && cargo run --bin server",
 
-    "typecheck":               "npm run typecheck --workspaces --if-present",
+    "//api": "── OpenAPI sync — postinstall runs this automatically ──",
+    "api:export":           "cd server && cargo run --bin export-openapi",
+    "api:codegen":          "npm run codegen --workspace @pkg/api-contracts",
+    "api:sync":             "npm run api:export && npm run api:codegen",
+    "postinstall":          "npm run api:sync --if-present || echo 'api:sync skipped (Rust unavailable) — run manually before typecheck'",
 
-    "android:customer":        "npm run android --workspace @app/customer",
-    "android:worker":          "npm run android --workspace @app/worker",
-    "ios:customer":            "npm run ios     --workspace @app/customer",
-    "ios:worker":              "npm run ios     --workspace @app/worker",
+    "//build": "── Typecheck + build (fans out to every workspace) ──",
+    "typecheck":            "npm run typecheck --workspaces --if-present",
+    "build":                "npm run build --workspaces --if-present",
+    "build:prod":           "npm run build:prod --workspaces --if-present",
+    "verify":               "npm run typecheck && npm run build",
 
-    "bundle:ota:customer":     "npm run bundle:ota --workspace @app/customer",
-    "bundle:ota:worker":       "npm run bundle:ota --workspace @app/worker",
-    "bundle:ota:customer:prod":"npm run bundle:ota:prod --workspace @app/customer",
-    "bundle:ota:worker:prod":  "npm run bundle:ota:prod --workspace @app/worker",
+    "//native": "── Native (Capacitor) — build + cap sync + cap run ──",
+    "android:customer":     "npm run android --workspace @app/customer",
+    "android:worker":       "npm run android --workspace @app/worker",
+    "ios:customer":         "npm run ios     --workspace @app/customer",
+    "ios:worker":           "npm run ios     --workspace @app/worker",
 
-    "server":                  "cd server && cargo run --bin server",
-
-    "api:export":              "cd server && cargo run --bin export-openapi",
-    "api:codegen":             "npm run codegen --workspace @pkg/api-contracts",
-    "api:sync":                "npm run api:export && npm run api:codegen",
-
-    "postinstall":             "npm run api:sync --if-present || echo 'api:sync skipped (Rust toolchain unavailable) — run manually before typechecking'",
-
-    "release:ota:customer":    "npm run api:sync && npm run bundle:ota:customer:prod",
-    "release:ota:worker":      "npm run api:sync && npm run bundle:ota:worker:prod",
-    "release:ota":             "npm run api:sync && npm run bundle:ota:customer:prod && npm run bundle:ota:worker:prod"
+    "//release": "── One-shot OTA release: api:sync → prod build → zip bundle ──",
+    "release:ota:customer": "npm run api:sync && npm run bundle:ota:prod --workspace @app/customer",
+    "release:ota:worker":   "npm run api:sync && npm run bundle:ota:prod --workspace @app/worker",
+    "release:ota":          "npm run api:sync && npm run bundle:ota:prod --workspaces --if-present"
   }
 }
