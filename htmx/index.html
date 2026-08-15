@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vaadin Web Components SPA (Spring Boot Style with Cart Badge)</title>
+    <style>
+        :root {
+            --primary: #0066cc;
+            --danger: #dc3545;
+            --success: #28a745;
+            --bg: #f4f5f7;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 520px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background: var(--bg);
+            color: #222;
+        }
+
+        v-layout[direction="vertical"] { display: flex; flex-direction: column; gap: 0.5rem; }
+        v-layout[direction="horizontal"] { display: flex; gap: 0.5rem; align-items: center; }
+
+        .nav { margin-bottom: 1rem; }
+        .nav v-button { flex: 1; }
+        .nav v-button.active button { background: var(--primary); color: white; border-color: var(--primary); }
+
+        v-card { display: block; background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+        ul { list-style: none; padding: 0; margin: 0; }
+        li { padding: 0.75rem; background: #fff; border: 1px solid #eee; margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Cart Badge Navigation Styling */
+        .cart-badge {
+            background: #ff9800;
+            color: #fff;
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 6px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+    // =========================================================================
+    // 1. FRAMEWORK CORE & WEB COMPONENTS
+    // =========================================================================
+
+    class Component {
+        constructor(tagOrElement) {
+            this.el = typeof tagOrElement === 'string'
+                ? document.createElement(tagOrElement)
+                : tagOrElement;
+        }
+
+        id(idString) { this.el.id = idString; return this; }
+
+        add(...children) {
+            children.forEach(child => {
+                if (typeof child === 'string') {
+                    this.el.appendChild(document.createTextNode(child));
+                } else if (child instanceof Component) {
+                    this.el.appendChild(child.el);
+                } else if (child instanceof HTMLElement) {
+                    this.el.appendChild(child);
+                }
+            });
+            return this;
+        }
+
+        addClass(...classes) { this.el.classList.add(...classes); return this; }
+        attr(name, val) { this.el.setAttribute(name, val); return this; }
+        text(content) { this.el.textContent = content; return this; }
+        onClick(handler) { this.el.addEventListener('click', handler); return this; }
+        removeAll() { this.el.innerHTML = ''; return this; }
+    }
+
+    // Reactive Stream Custom Element (Hotwire/HTMX Style Updates)
+    class VStream extends HTMLElement {
+        connectedCallback() {
+            const action = this.getAttribute('action');
+            const targetId = this.getAttribute('target');
+            const targetEl = document.getElementById(targetId);
+
+            if (!targetEl && action !== 'remove') {
+                this.remove();
+                return;
+            }
+
+            const nodes = Array.from(this.childNodes);
+
+            switch (action) {
+                case 'prepend':
+                    nodes.reverse().forEach(n => targetEl.insertBefore(n, targetEl.firstChild));
+                    break;
+                case 'replace':
+                    if (nodes.length > 0) targetEl.replaceWith(nodes[0]);
+                    break;
+                case 'update':
+                    targetEl.innerHTML = '';
+                    nodes.forEach(n => targetEl.appendChild(n));
+                    break;
+                case 'remove':
+                    const elToRemove = document.getElementById(targetId);
+                    if (elToRemove) elToRemove.remove();
+                    break;
+            }
+            this.remove();
+        }
+    }
+    customElements.define('v-stream', VStream);
+
+    const Stream = (action, targetId, child) => {
+        const streamEl = new Component('v-stream').attr('action', action).attr('target', targetId);
+        if (child) streamEl.add(child);
+        document.body.appendChild(streamEl.el);
+        return streamEl;
+    };
+
+    customElements.define('v-layout', class extends HTMLElement {
+        connectedCallback() {
+            if (!this.hasAttribute('direction')) this.setAttribute('direction', 'vertical');
+        }
+    });
+
+    customElements.define('v-card', class extends HTMLElement {});
+
+    customElements.define('v-button', class extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+            this.shadowRoot.innerHTML = `
+                <style>
+                    button { width: 100%; padding: 0.6rem 1rem; background: var(--primary, #0066cc); color: white; border: 1px solid transparent; border-radius: 4px; font-weight: 600; cursor: pointer; font-family: inherit; font-size: 0.95rem; }
+                    :host([variant="danger"]) button { background: var(--danger, #dc3545); }
+                    :host([variant="secondary"]) button { background: #6c757d; }
+                    :host([variant="outline"]) button { background: #fff; color: #333; border-color: #ccc; }
+                </style>
+                <button><slot></slot></button>
+            `;
+        }
+    });
+
+    customElements.define('v-textfield', class extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+            this.shadowRoot.innerHTML = `
+                <style>
+                    :host { flex: 1; display: flex; }
+                    input { width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; }
+                </style>
+                <input type="text" />
+            `;
+            this._input = this.shadowRoot.querySelector('input');
+        }
+        connectedCallback() {
+            if (this.hasAttribute('placeholder')) this._input.placeholder = this.getAttribute('placeholder');
+            if (this.hasAttribute('value')) this._input.value = this.getAttribute('value');
+        }
+        get value() { return this._input.value; }
+        set value(val) { this._input.value = val; }
+        clear() { this._input.value = ''; }
+    });
+
+    customElements.define('v-badge', class extends HTMLElement {
+        static get observedAttributes() { return ['status']; }
+        constructor() {
+            super();
+            this.attachShadow({ mode: 'open' });
+            this.shadowRoot.innerHTML = `
+                <style>
+                    .badge { font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 10px; font-weight: bold; font-family: inherit; }
+                    .local { background: #fff3cd; color: #856404; }
+                    .synced { background: #d4edda; color: #155724; }
+                </style>
+                <span class="badge local"><slot></slot></span>
+            `;
+            this._span = this.shadowRoot.querySelector('.badge');
+        }
+        attributeChangedCallback(name, oldValue, newValue) {
+            if (name === 'status') this._span.className = `badge ${newValue === 'synced' ? 'synced' : 'local'}`;
+        }
+    });
+
+    const VerticalLayout = (...c) => new Component('v-layout').attr('direction', 'vertical').add(...c);
+    const HorizontalLayout = (...c) => new Component('v-layout').attr('direction', 'horizontal').add(...c);
+    const Card = (...c) => new Component('v-card').add(...c);
+    const H2 = (txt) => new Component('h2').text(txt);
+    const Text = (txt) => new Component('span').text(txt);
+    const Paragraph = (txt) => new Component('p').text(txt);
+
+    class Button extends Component {
+        constructor(text, onClickHandler, variant = 'primary') {
+            super('v-button');
+            this.text(text);
+            if (variant !== 'primary') this.attr('variant', variant);
+            if (onClickHandler) this.onClick(onClickHandler);
+        }
+    }
+
+    class TextField extends Component {
+        constructor(placeholder = '') {
+            super('v-textfield');
+            if (placeholder) this.attr('placeholder', placeholder);
+        }
+        getValue() { return this.el.value; }
+        setValue(val) { this.el.value = val; return this; }
+        clear() { this.el.clear(); return this; }
+    }
+
+    class Badge extends Component {
+        constructor(text, isSynced) {
+            super('v-badge');
+            this.attr('status', isSynced ? 'synced' : 'local').text(text);
+        }
+    }
+
+    // =========================================================================
+    // 2. DOMAIN MODEL
+    // =========================================================================
+    class Task {
+        constructor({ id = Date.now().toString(), title, synced = 0, createdAt = Date.now(), editing = false }) {
+            this.id = id;
+            this.title = title;
+            this.synced = synced;
+            this.createdAt = createdAt;
+            this.editing = editing;
+        }
+    }
+
+    // =========================================================================
+    // 3. REPOSITORY LAYER (Spring Data Repository Pattern - IndexedDB API)
+    // =========================================================================
+    class TaskRepository {
+        constructor() {
+            this.dbName = 'VaadinCrudSpaDB';
+            this.storeName = 'tasks';
+        }
+
+        async getDatabase() {
+            return new Promise((res) => {
+                const req = indexedDB.open(this.dbName, 1);
+                req.onupgradeneeded = () => req.result.createObjectStore(this.storeName, { keyPath: 'id' });
+                req.onsuccess = () => res(req.result);
+            });
+        }
+
+        async findAll() {
+            const db = await this.getDatabase();
+            return new Promise(res => {
+                const req = db.transaction(this.storeName, 'readonly').objectStore(this.storeName).getAll();
+                req.onsuccess = () => res(req.result.map(data => new Task(data)));
+            });
+        }
+
+        async save(task) {
+            const db = await this.getDatabase();
+            return new Promise(res => {
+                const tx = db.transaction(this.storeName, 'readwrite');
+                tx.objectStore(this.storeName).put(task);
+                tx.oncomplete = () => res(task);
+            });
+        }
+
+        async deleteById(id) {
+            const db = await this.getDatabase();
+            return new Promise(res => {
+                const tx = db.transaction(this.storeName, 'readwrite');
+                tx.objectStore(this.storeName).delete(id);
+                tx.oncomplete = () => res();
+            });
+        }
+
+        async saveAllAndClear(tasks) {
+            const db = await this.getDatabase();
+            return new Promise(res => {
+                const tx = db.transaction(this.storeName, 'readwrite');
+                const store = tx.objectStore(this.storeName);
+                store.clear();
+                tasks.forEach(t => store.put(t));
+                tx.oncomplete = () => res();
+            });
+        }
+    }
+
+    // =========================================================================
+    // 4. SERVICE LAYER WITH APPLICATION EVENT PUBLISHER
+    // =========================================================================
+    class TaskService {
+        constructor(repository) {
+            this.taskRepository = repository;
+            this.serverUrl = 'http://localhost:3000';
+        }
+
+        // Fills the role of Spring ApplicationEventPublisher
+        async publishCountChangeEvent() {
+            const tasks = await this.getTasks();
+            const totalCount = tasks.length;
+
+            // 1. Dispatch custom DOM event for decoupled components
+            window.dispatchEvent(new CustomEvent('task-count-updated', { detail: { count: totalCount } }));
+
+            // 2. Stream update directly via HTMX/Hotwire style VStream tag
+            Stream('update', 'cart-count-badge', Text(`${totalCount}`));
+        }
+
+        async getTasks() {
+            return await this.taskRepository.findAll();
+        }
+
+        async createTask(title) {
+            const task = new Task({ title, synced: 0 });
+            await this.taskRepository.save(task);
+            await this.publishCountChangeEvent();
+            return task;
+        }
+
+        async updateTask(task) {
+            const updated = await this.taskRepository.save(task);
+            await this.publishCountChangeEvent();
+            return updated;
+        }
+
+        async deleteTask(id) {
+            await this.taskRepository.deleteById(id);
+            await this.publishCountChangeEvent();
+            if (navigator.onLine) {
+                fetch(`${this.serverUrl}/api/tasks/${id}`, { method: 'DELETE' }).catch(() => {});
+            }
+        }
+
+        async syncWithRemoteServer() {
+            if (!navigator.onLine) return;
+            try {
+                const localTasks = await this.taskRepository.findAll();
+                const unsynced = localTasks.filter(t => !t.synced);
+
+                if (unsynced.length > 0) {
+                    const res = await fetch(`${this.serverUrl}/api/sync`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tasks: unsynced })
+                    });
+                    if (res.ok) {
+                        const { syncedIds } = await res.json();
+                        for (const task of localTasks) {
+                            if (syncedIds.includes(task.id)) {
+                                task.synced = 1;
+                                await this.taskRepository.save(task);
+                            }
+                        }
+                    }
+                }
+
+                // Server fetches fresh total task items
+                const getRes = await fetch(`${this.serverUrl}/api/tasks`);
+                if (getRes.ok) {
+                    const { tasks: serverTasks } = await getRes.json();
+                    await this.taskRepository.saveAllAndClear(serverTasks);
+                    await this.publishCountChangeEvent();
+                    AppRouter.renderCurrentRoute();
+                }
+            } catch (err) {
+                console.log('Server offline - using local count.');
+                await this.publishCountChangeEvent();
+            }
+        }
+    }
+
+    const taskRepository = new TaskRepository();
+    const taskService = new TaskService(taskRepository);
+
+    // =========================================================================
+    // 5. CART BADGE & VIEW COMPONENTS
+    // =========================================================================
+
+    // Dedicated Cart-style counter badge (Similar to Vaadin Component with Event Listener)
+    class CartBadgeComponent extends Component {
+        constructor() {
+            super('span');
+            this.addClass('cart-badge').id('cart-count-badge').text('0');
+
+            // Listen to Application Events emitted from Service layer
+            window.addEventListener('task-count-updated', (e) => {
+                this.text(`${e.detail.count}`);
+            });
+
+            // Initializing initial state
+            taskService.getTasks().then(tasks => this.text(`${tasks.length}`));
+        }
+    }
+
+    class TaskItemComponentBuilder {
+        static build(task) {
+            const li = new Component('li').id(`task-${task.id}`);
+
+            if (task.editing) {
+                const editInput = new TextField().setValue(task.title);
+
+                const saveBtn = new Button('Save', async () => {
+                    const newTitle = editInput.getValue().trim();
+                    if (newTitle) {
+                        task.title = newTitle;
+                        task.synced = 0;
+                        delete task.editing;
+                        await taskService.updateTask(task);
+                        Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                        taskService.syncWithRemoteServer();
+                    }
+                });
+
+                const cancelBtn = new Button('Cancel', async () => {
+                    delete task.editing;
+                    await taskService.updateTask(task);
+                    Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                }, 'secondary');
+
+                li.add(HorizontalLayout(editInput, saveBtn, cancelBtn).addClass('edit-mode'));
+            } else {
+                const titleText = Text(`📌 ${task.title}`);
+                const badge = new Badge(task.synced ? 'Synced' : 'Local', task.synced);
+
+                const editBtn = new Button('Edit', async () => {
+                    task.editing = true;
+                    await taskService.updateTask(task);
+                    Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                }, 'secondary');
+
+                const deleteBtn = new Button('Delete', async () => {
+                    await taskService.deleteTask(task.id);
+                    Stream('remove', `task-${task.id}`);
+                }, 'danger');
+
+                const actions = HorizontalLayout(badge, editBtn, deleteBtn).addClass('actions');
+                li.add(titleText, actions);
+            }
+
+            return li;
+        }
+    }
+
+    class TaskView {
+        static async render() {
+            const container = VerticalLayout();
+            container.add(H2('Task Manager'));
+
+            const taskInput = new TextField('Add new task...');
+            const addButton = new Button('Add Task', async () => {
+                const title = taskInput.getValue().trim();
+                if (!title) return;
+
+                const newTask = await taskService.createTask(title);
+                taskInput.clear();
+
+                Stream('prepend', 'task-list', TaskItemComponentBuilder.build(newTask));
+                taskService.syncWithRemoteServer();
+            });
+
+            container.add(HorizontalLayout(taskInput, addButton));
+
+            const tasks = await taskService.getTasks();
+            const taskList = new Component('ul').id('task-list');
+
+            tasks.reverse().forEach(task => {
+                taskList.add(TaskItemComponentBuilder.build(task));
+            });
+
+            container.add(taskList);
+            return container;
+        }
+    }
+
+    class SyncSettingsView {
+        static async render() {
+            const tasks = await taskService.getTasks();
+            const pending = tasks.filter(t => !t.synced).length;
+
+            return VerticalLayout(
+                H2('Sync Dashboard'),
+                Paragraph(`Database Engine: IndexedDB (TaskRepository)`),
+                Paragraph(`Unsynced Local Actions: ${pending}`),
+                new Button('Sync Now with Server', async () => {
+                    await taskService.syncWithRemoteServer();
+                })
+            );
+        }
+    }
+
+    // =========================================================================
+    // 6. NAVIGATION & APPLICATION ROUTER
+    // =========================================================================
+    class AppRouter {
+        static currentRoute = '/';
+        static navContainer = null;
+        static appContainer = null;
+
+        static init() {
+            const root = document.getElementById('root');
+
+            // Navigation includes the live Cart Badge Component
+            const tasksNavBtn = new Button('Tasks View', () => this.navigate('/'), 'outline').addClass('active');
+            const cartBadge = new CartBadgeComponent();
+            tasksNavBtn.add(cartBadge);
+
+            this.navContainer = HorizontalLayout(
+                tasksNavBtn,
+                new Button('Sync Settings', () => this.navigate('/settings'), 'outline')
+            ).addClass('nav');
+
+            this.appContainer = Card();
+            root.appendChild(this.navContainer.el);
+            root.appendChild(this.appContainer.el);
+
+            window.addEventListener('popstate', () => {
+                this.currentRoute = window.location.pathname || '/';
+                this.renderCurrentRoute();
+            });
+
+            this.renderCurrentRoute();
+        }
+
+        static async navigate(path) {
+            this.currentRoute = path;
+            window.history.pushState({}, '', path);
+            await this.renderCurrentRoute();
+        }
+
+        static async renderCurrentRoute() {
+            const buttons = this.navContainer.el.querySelectorAll('v-button');
+            if (buttons.length >= 2) {
+                buttons[0].classList.toggle('active', this.currentRoute === '/');
+                buttons[1].classList.toggle('active', this.currentRoute === '/settings');
+            }
+
+            let viewComponent;
+            switch (this.currentRoute) {
+                case '/settings':
+                    viewComponent = await SyncSettingsView.render();
+                    break;
+                case '/':
+                default:
+                    viewComponent = await TaskView.render();
+                    break;
+            }
+
+            this.appContainer.removeAll().add(viewComponent);
+        }
+    }
+
+    window.addEventListener('online', () => taskService.syncWithRemoteServer());
+    window.addEventListener('DOMContentLoaded', () => {
+        AppRouter.init();
+        taskService.syncWithRemoteServer();
+    });
+</script>
+</body>
+</html>
