@@ -10,12 +10,9 @@
     "./openapi": "./openapi.json"
   },
   "scripts": {
-    "codegen": "openapi-ts -i openapi.json -o src/generated -c @hey-api/client-fetch"
-  },
-  "dependencies": {
-    "@hey-api/client-fetch": "^0.4.2"
+    "codegen": "openapi-typescript openapi.json -o src/generated/types.ts"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.99.0"
+    "openapi-typescript": "^7.4.4"
   }
 }

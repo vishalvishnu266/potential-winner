@@ -38,12 +38,10 @@ export const otaClient = {
         return getOtaConfig().buildVersion ?? '0.0.0';
     },
 
-    /** Ask the server (via the generated client) whether a newer bundle is available. */
+    /** Ask the server whether a newer bundle is available. */
     async checkServer(currentVersion: string): Promise<CheckUpdateResponse> {
         const { appName } = getOtaConfig();
-        return api.checkUpdate({
-            query: { current: currentVersion, app: appName },
-        });
+        return api.checkUpdate({ current: currentVersion, app: appName });
     },
 
     /** Download a bundle. Returns the bundle descriptor for `applyBundle`. */

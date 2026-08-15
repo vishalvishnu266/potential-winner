@@ -55,7 +55,7 @@ task-platform/
 │  ├─ theme/                    Tailwind v4 tokens + fixed emerald brand palette
 │  ├─ native/                   Capacitor wrappers (storage, haptics, useTheme, ...)
 │  ├─ i18n/                     generic createI18n({ bundles, defaultLocale })
-│  ├─ api-contracts/            generated typed client + configureApi
+│  ├─ api-contracts/            hand-rolled fetch client + `openapi-typescript`-generated types
 │  ├─ ota/                      configureOta, useOta, otaStore, UpdateOverlay (uses api.checkUpdate)
 │  ├─ ui/                       generic <TabBar />, more components to come
 │  └─ vite-config/              createAppConfig({ appName, appDir }) — one factory, both apps
@@ -89,7 +89,7 @@ The app-agnostic shell has been extracted into workspace packages so
 | `@pkg/theme`         | Tailwind v4 tokens, dark/light surfaces, single fixed emerald brand palette (`style.css`).  | Both apps import in `main.tsx`|
 | `@pkg/native`        | Capacitor wrappers: `initNative`, `syncStatusBar`, `hapticTap`, `storage`, `useTheme`. | Both apps |
 | `@pkg/i18n`          | Generic `createI18n({ bundles, defaultLocale, localeMeta })` factory.          | Each app registers its own bundles |
-| `@pkg/api-contracts` | Generated typed client + `configureApi({ baseUrl })`. Source of truth: `openapi.json` (regenerated from the Rust server via `npm run api:sync`). | Both apps |
+| `@pkg/api-contracts` | Hand-rolled ~40-line fetch client + `configureApi({ baseUrl })`. Types generated from `openapi.json` by `openapi-typescript` (no runtime client library). | Both apps |
 | `@pkg/ota`           | `configureOta({ appName })`, `otaClient`, `useOtaStore`, `useOta`, `UpdateOverlay`. Uses `api.checkUpdate` under the hood — no separate HTTP transport. | Both apps |
 | `@pkg/ui`            | Generic `<TabBar tabs={...} getTabForPath={...} />`.                            | Each app supplies its own tab list |
 | `@pkg/vite-config`   | `createAppConfig({ appName, appDir })` — React + Tailwind plugins, monorepo `fs.allow`, shared-package pre-bundling, `__APP_*__` compile-time globals, `APP_VERSION` stamping. | Both `vite.config.js` files are now one-liners. |
@@ -244,12 +244,13 @@ cargo run --bin export-openapi ─┘
      ▼
 packages/api-contracts/openapi.json                       (committed)
      │
-npm run api:codegen  (@hey-api/openapi-ts)
+npm run api:codegen  (openapi-typescript — types only, zero runtime dep)
      ▼
-packages/api-contracts/src/generated/                     (git-ignored *.gen.ts)
-     │  types.gen.ts   — request/response TS types
-     │  services.gen.ts — one typed function per endpoint
-     │  schemas.gen.ts  — runtime schema objects
+packages/api-contracts/src/generated/types.ts             (git-ignored)
+     │  `paths` + `components['schemas']`
+     ▼
+packages/api-contracts/src/index.ts                       (hand-rolled ~40 lines)
+     │  Native `fetch` + `api.<endpoint>({...})` — no third-party client
      ▼
 apps/{customer,worker}/src/**/*  imports it as `@pkg/api-contracts`
 ```
@@ -277,7 +278,7 @@ Add a new endpoint:
 import { api, configureApi } from '@pkg/api-contracts';
 
 // Done once at boot in main.tsx:
-configureApi({ baseUrl: 'http://192.168.0.4:3000' });
+configureApi({ baseUrl: 'http://192.168.0.5:3000' });
 
 // Everywhere else, from any component/hook/effect:
 const { ok }       = await api.health();
