@@ -1,4 +1,5 @@
-# Everything under src/generated/ is codegen output — but we DO commit the
-# placeholder index.ts so a fresh clone works without running codegen.
-# Only ignore the *.gen.ts files that `@hey-api/openapi-ts` emits.
-src/generated/*.gen.ts
+# Everything under src/generated/ is codegen output written by
+# `@hey-api/openapi-ts` (see `openapi-ts.config.ts`).  We do NOT commit
+# it — a fresh clone regenerates it via `npm run api:sync`, which the
+# root `postinstall` hook runs automatically after `npm install`.
+src/generated/

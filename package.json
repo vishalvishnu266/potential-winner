@@ -8,31 +8,37 @@
     "packages/*"
   ],
   "scripts": {
-    "dev:customer":         "npm run dev  --workspace @app/customer",
-    "dev:worker":           "npm run dev  --workspace @app/worker",
-    "dev:customer:real":    "npm run dev:real --workspace @app/customer",
-    "dev:worker:real":      "npm run dev:real --workspace @app/worker",
+    "dev:customer":            "npm run dev  --workspace @app/customer",
+    "dev:worker":              "npm run dev  --workspace @app/worker",
 
-    "build:customer":       "npm run build --workspace @app/customer",
-    "build:worker":         "npm run build --workspace @app/worker",
-    "build:customer:prod":  "npm run build:prod --workspace @app/customer",
-    "build:worker:prod":    "npm run build:prod --workspace @app/worker",
-    "build:all":            "npm run build:customer && npm run build:worker",
+    "build:customer":          "npm run build --workspace @app/customer",
+    "build:worker":            "npm run build --workspace @app/worker",
+    "build:customer:prod":     "npm run build:prod --workspace @app/customer",
+    "build:worker:prod":       "npm run build:prod --workspace @app/worker",
+    "build:all":               "npm run build:customer && npm run build:worker",
 
-    "typecheck":            "npm run typecheck --workspaces --if-present",
+    "typecheck":               "npm run typecheck --workspaces --if-present",
 
-    "android:customer":     "npm run android --workspace @app/customer",
-    "android:worker":       "npm run android --workspace @app/worker",
-    "ios:customer":         "npm run ios     --workspace @app/customer",
-    "ios:worker":           "npm run ios     --workspace @app/worker",
+    "android:customer":        "npm run android --workspace @app/customer",
+    "android:worker":          "npm run android --workspace @app/worker",
+    "ios:customer":            "npm run ios     --workspace @app/customer",
+    "ios:worker":              "npm run ios     --workspace @app/worker",
 
-    "bundle:ota:customer":  "npm run bundle:ota --workspace @app/customer",
-    "bundle:ota:worker":    "npm run bundle:ota --workspace @app/worker",
+    "bundle:ota:customer":     "npm run bundle:ota --workspace @app/customer",
+    "bundle:ota:worker":       "npm run bundle:ota --workspace @app/worker",
+    "bundle:ota:customer:prod":"npm run bundle:ota:prod --workspace @app/customer",
+    "bundle:ota:worker:prod":  "npm run bundle:ota:prod --workspace @app/worker",
 
-    "server":               "cd server && cargo run --bin server",
+    "server":                  "cd server && cargo run --bin server",
 
-    "api:export":           "cd server && cargo run --bin export-openapi",
-    "api:codegen":          "npm run codegen --workspace @pkg/api-contracts",
-    "api:sync":             "npm run api:export && npm run api:codegen"
+    "api:export":              "cd server && cargo run --bin export-openapi",
+    "api:codegen":             "npm run codegen --workspace @pkg/api-contracts",
+    "api:sync":                "npm run api:export && npm run api:codegen",
+
+    "postinstall":             "npm run api:sync --if-present || echo 'api:sync skipped (Rust toolchain unavailable) — run manually before typechecking'",
+
+    "release:ota:customer":    "npm run api:sync && npm run bundle:ota:customer:prod",
+    "release:ota:worker":      "npm run api:sync && npm run bundle:ota:worker:prod",
+    "release:ota":             "npm run api:sync && npm run bundle:ota:customer:prod && npm run bundle:ota:worker:prod"
   }
 }

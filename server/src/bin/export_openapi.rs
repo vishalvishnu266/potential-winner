@@ -10,13 +10,18 @@
 //!
 //!     npm run api:export      # cargo run --bin export-openapi
 //!     npm run api:codegen     # openapi codegen
-//!     npm run api:sync        # both
+//!     npm run api:sync        # both (also run automatically by `postinstall`)
 
-// The binary lives inside the same crate as the server library.  Re-declare
-// the `api` module so this binary can reach `ApiDoc` without needing a
-// dedicated `lib.rs`.
-#[path = "../api.rs"]
-mod api;
+// This binary lives inside the same crate as the server (no `lib.rs`),
+// so we re-declare the modules it needs via `#[path]`.  Only `openapi`
+// is required at the top level, but it in turn pulls in `handlers` and
+// `config` — so include those siblings too.
+#[path = "../config.rs"]
+mod config;
+#[path = "../handlers/mod.rs"]
+mod handlers;
+#[path = "../openapi.rs"]
+mod openapi;
 
 use std::path::PathBuf;
 use utoipa::OpenApi;
@@ -45,7 +50,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let doc = api::ApiDoc::openapi();
+    let doc = openapi::ApiDoc::openapi();
     let json = doc.to_pretty_json()?;
 
     if let Some(parent) = out.parent() {

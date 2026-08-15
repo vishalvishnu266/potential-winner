@@ -2,6 +2,7 @@
 name = "server"
 version = "0.1.0"
 edition = "2024"
+default-run = "server"
 
 # The main axum server binary is `src/main.rs` (auto-detected).
 # A second binary exports the OpenAPI JSON to the shared TS package
@@ -16,7 +17,6 @@ path = "src/bin/export_openapi.rs"
 axum = "0.7"
 tokio = { version = "1.0", features = ["full"] }
 tower-http = { version = "0.5", features = ["cors", "fs", "trace", "request-id", "util"] }
-tower = "0.4"
 http = "1"
 
 # --- Data ---

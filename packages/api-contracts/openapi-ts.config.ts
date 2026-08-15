@@ -4,12 +4,12 @@
  * Emits, into `src/generated/`:
  *   • `types.gen.ts`    — every request/response schema as TS types
  *   • `services.gen.ts` — a typed function per endpoint (`health()`, `checkUpdate({...})`)
- *   • `schemas.gen.ts`  — runtime schema objects (optional; used by mock adapter)
+ *   • `schemas.gen.ts`  — runtime schema objects (kept as optionality; no consumer today)
  *   • `index.ts`        — barrel re-exporting everything
  *
- * The generated client uses `@hey-api/client-fetch` which supports a
- * pluggable `fetch` — that's how our mock adapter intercepts calls
- * without a service worker.
+ * The generated client uses `@hey-api/client-fetch`, which exposes a
+ * pluggable `fetch` — leaving room for interceptors (auth, logging) at
+ * boot time via `configureApi({ fetch })`.
  */
 import { defineConfig } from '@hey-api/openapi-ts';
 
@@ -27,8 +27,6 @@ export default defineConfig({
         enums: 'typescript',
     },
     schemas: {
-        // Emit runtime schema objects with example values so the mock
-        // adapter can fabricate default responses for every endpoint.
         export: true,
     },
 });

@@ -10,9 +10,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <!--
-      A neutral placeholder — the real value is set by `syncStatusBar()`
-      (see `src/composables/useNative.ts`) using the *actual* computed
-      surface colour, which stays in sync with the current theme mode.
+      A neutral placeholder — the real value is set at runtime by
+      `syncStatusBar()` from `@pkg/native`, using the actual computed
+      surface colour so the status bar stays in sync with the current
+      theme mode.
     -->
     <meta name="theme-color" content="#ffffff" />
     <title>Worker</title>

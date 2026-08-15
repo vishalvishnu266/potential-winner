@@ -1,13 +1,13 @@
 /**
- * @pkg/theme — shared Tailwind + accent tokens for all apps in this monorepo.
+ * @pkg/theme — shared Tailwind + brand tokens for all apps in this monorepo.
  *
  * There is no runtime API. Apps consume this package as CSS:
  *
  *   import '@pkg/theme/style.css';
  *
- * The stylesheet defines light/dark surface tokens plus the seven curated
- * accent palettes selectable via the `data-accent` attribute on <html>
- * (indigo, violet, sky, emerald, amber, rose, slate).  The picker itself
- * lives in `@pkg/native` (useAccent).
+ * The stylesheet defines light/dark surface tokens plus a single fixed
+ * emerald brand palette.  Light/dark switching is driven by the
+ * `data-theme` attribute on <html> (see `useTheme` in `@pkg/native`);
+ * the brand colour is not user-swappable.
  */
 export {};

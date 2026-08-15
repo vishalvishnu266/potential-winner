@@ -25,9 +25,8 @@
  *     const info = await api.health();
  *     const upd  = await api.checkUpdate({ query: { current: 'v0.1', app: 'customer' } });
  *
- * Mock mode:  see `@pkg/api-contracts/mock` — one call in `main.tsx`
- * seeds sensible default responses for every endpoint from the OpenAPI
- * `example` values.  Per-endpoint overrides supported.
+ * There is no mock adapter — every build talks to the real Rust server.
+ * Run `npm run server` in one terminal, then `npm run dev:<app>` in another.
  */
 
 // Re-export everything the generator produces.  The wildcard is safe
@@ -41,16 +40,3 @@ export const api = sdk;
 
 // Runtime configuration for the fetch client.
 export { configureApi, getApiConfig } from './config';
-
-// Base contract retained for hand-written interfaces that pre-date the
-// generated client (e.g. `apps/*/src/data/types.ts::Api extends BaseApi`).
-export interface HealthResponse   { ok: boolean; }
-export interface CheckUpdateResponse {
-    available: boolean;
-    version: string | null;
-    url:     string | null;
-}
-export interface BaseApi {
-    health(): Promise<HealthResponse>;
-    checkUpdate(currentVersion: string): Promise<CheckUpdateResponse>;
-}

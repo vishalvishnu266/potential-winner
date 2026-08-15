@@ -13,11 +13,11 @@ export interface ApiConfig {
     baseUrl: string;
     /** Extra headers to attach to every request. */
     headers?: Record<string, string>;
-    /** Optional custom fetch (used by the mock adapter). */
+    /** Optional custom fetch (interceptors, auth, logging). */
     fetch?: typeof fetch;
 }
 
-let current: ApiConfig = { baseUrl: 'http://192.168.0.5:3000' };
+let current: ApiConfig = { baseUrl: 'http://localhost:3000' };
 
 export function configureApi(patch: Partial<ApiConfig>): void {
     current = { ...current, ...patch };

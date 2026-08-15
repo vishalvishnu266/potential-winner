@@ -4,15 +4,13 @@
  * ---------------------------------------------------------------------------
  * TaskFinder — theme tokens
  * ---------------------------------------------------------------------------
- *   Mode   — light / dark, driven by `data-theme` on <html>.
- *   Accent — brand hue, picked ONCE at BUILD TIME (APP_ACCENT env var)
- *            and applied to `data-accent` on <html>.  Not user-swappable.
+ *   Mode  — light / dark, driven by `data-theme` on <html>.
+ *   Brand — a single fixed emerald green.  Not user-swappable, not per-app,
+ *           not per-tenant.  Baked into the base tokens below.
  *
- * Each accent block declares BOTH a light-mode value AND a dark-mode
- * override so the brand colour stays readable on either background.
- * Dark mode gets a slightly lighter/brighter hue so it still pops against
- * near-black; light mode uses the deeper 500/600 shade so it doesn't feel
- * washed out on a bright surface.
+ * The brand hue has TWO tuned values — one for light mode (deeper 600
+ * shade so it doesn't feel washed out on a bright surface) and one for
+ * dark mode (lighter 400 shade so it still pops against near-black).
  * ---------------------------------------------------------------------------
  */
 
@@ -25,11 +23,11 @@
   --color-text:      #111114;
   --color-muted:     #6b7280;
 
-  /* Fallback accent — overridden by the [data-accent] blocks below. */
-  --color-accent:    #4f46e5;
-  --color-accent-2:  #7c3aed;
+  /* Brand — emerald (light mode). */
+  --color-accent:    #059669;
+  --color-accent-2:  #10b981;
   --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(79, 70, 229, 0.45);
+  --shadow-accent:   0 6px 20px -8px rgba(5, 150, 105, 0.45);
 
   --grad-brand:      linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
 
@@ -45,6 +43,12 @@
   --color-hairline:  rgba(255, 255, 255, 0.06);
   --color-text:      #f4f4f5;
   --color-muted:     #a1a1aa;
+
+  /* Brand — emerald (dark mode override for legibility on near-black). */
+  --color-accent:    #34d399;
+  --color-accent-2:  #6ee7b7;
+  --color-accent-fg: #052e20;
+  --shadow-accent:   0 6px 20px -8px rgba(52, 211, 153, 0.55);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -54,165 +58,11 @@
     --color-hairline: rgba(255, 255, 255, 0.06);
     --color-text:     #f4f4f5;
     --color-muted:    #a1a1aa;
-  }
-}
 
-/* ---------------------------------------------------------------------------
- * ACCENT PALETTES
- *
- * Format for each preset:
- *
- *   :root[data-accent="foo"]                          { …light-mode accent… }
- *   :root[data-accent="foo"][data-theme="dark"]       { …dark-mode override… }
- *   @media (prefers-color-scheme: dark) {
- *     :root[data-accent="foo"]:not([data-theme])      { …dark-mode override… }
- *   }
- *
- * Curated so each palette has strong contrast on BOTH the bright light
- * surface and the near-black dark surface.
- * ------------------------------------------------------------------------- */
-
-/* --- Indigo — deep, professional, plays nicely with dark UI ----------- */
-:root[data-accent="indigo"] {
-  --color-accent:    #4f46e5;
-  --color-accent-2:  #7c3aed;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(79, 70, 229, 0.45);
-}
-:root[data-accent="indigo"][data-theme="dark"],
-:root[data-accent="indigo"]:not([data-theme]) {
-  /* No override needed — indigo already has enough luminance on dark. */
-}
-
-/* --- Violet — vibrant, energetic --------------------------------------- */
-:root[data-accent="violet"] {
-  --color-accent:    #7c3aed;
-  --color-accent-2:  #c026d3;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(124, 58, 237, 0.45);
-}
-:root[data-accent="violet"][data-theme="dark"] {
-  --color-accent:    #a78bfa;
-  --color-accent-2:  #e879f9;
-  --color-accent-fg: #1a1023;
-  --shadow-accent:   0 6px 20px -8px rgba(167, 139, 250, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="violet"]:not([data-theme]) {
-    --color-accent:    #a78bfa;
-    --color-accent-2:  #e879f9;
-    --color-accent-fg: #1a1023;
-    --shadow-accent:   0 6px 20px -8px rgba(167, 139, 250, 0.55);
-  }
-}
-
-/* --- Sky — calm, airy, techy ------------------------------------------ */
-:root[data-accent="sky"] {
-  --color-accent:    #0284c7;
-  --color-accent-2:  #06b6d4;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(2, 132, 199, 0.45);
-}
-:root[data-accent="sky"][data-theme="dark"] {
-  --color-accent:    #38bdf8;
-  --color-accent-2:  #22d3ee;
-  --color-accent-fg: #04212e;
-  --shadow-accent:   0 6px 20px -8px rgba(56, 189, 248, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="sky"]:not([data-theme]) {
-    --color-accent:    #38bdf8;
-    --color-accent-2:  #22d3ee;
-    --color-accent-fg: #04212e;
-    --shadow-accent:   0 6px 20px -8px rgba(56, 189, 248, 0.55);
-  }
-}
-
-/* --- Emerald — fresh, positive, growth --------------------------------- */
-:root[data-accent="emerald"] {
-  --color-accent:    #059669;
-  --color-accent-2:  #10b981;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(5, 150, 105, 0.45);
-}
-:root[data-accent="emerald"][data-theme="dark"] {
-  --color-accent:    #34d399;
-  --color-accent-2:  #6ee7b7;
-  --color-accent-fg: #052e20;
-  --shadow-accent:   0 6px 20px -8px rgba(52, 211, 153, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="emerald"]:not([data-theme]) {
     --color-accent:    #34d399;
     --color-accent-2:  #6ee7b7;
     --color-accent-fg: #052e20;
     --shadow-accent:   0 6px 20px -8px rgba(52, 211, 153, 0.55);
-  }
-}
-
-/* --- Amber — warm, attention-grabbing, food/hospitality --------------- */
-:root[data-accent="amber"] {
-  --color-accent:    #d97706;
-  --color-accent-2:  #f59e0b;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(217, 119, 6, 0.45);
-}
-:root[data-accent="amber"][data-theme="dark"] {
-  --color-accent:    #fbbf24;
-  --color-accent-2:  #fcd34d;
-  --color-accent-fg: #2a1a02;
-  --shadow-accent:   0 6px 20px -8px rgba(251, 191, 36, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="amber"]:not([data-theme]) {
-    --color-accent:    #fbbf24;
-    --color-accent-2:  #fcd34d;
-    --color-accent-fg: #2a1a02;
-    --shadow-accent:   0 6px 20px -8px rgba(251, 191, 36, 0.55);
-  }
-}
-
-/* --- Rose — friendly, warm, social ------------------------------------ */
-:root[data-accent="rose"] {
-  --color-accent:    #e11d48;
-  --color-accent-2:  #f43f5e;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(225, 29, 72, 0.45);
-}
-:root[data-accent="rose"][data-theme="dark"] {
-  --color-accent:    #fb7185;
-  --color-accent-2:  #fda4af;
-  --color-accent-fg: #2b0510;
-  --shadow-accent:   0 6px 20px -8px rgba(251, 113, 133, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="rose"]:not([data-theme]) {
-    --color-accent:    #fb7185;
-    --color-accent-2:  #fda4af;
-    --color-accent-fg: #2b0510;
-    --shadow-accent:   0 6px 20px -8px rgba(251, 113, 133, 0.55);
-  }
-}
-
-/* --- Slate — muted, neutral, enterprise -------------------------------- */
-:root[data-accent="slate"] {
-  --color-accent:    #334155;
-  --color-accent-2:  #475569;
-  --color-accent-fg: #ffffff;
-  --shadow-accent:   0 6px 20px -8px rgba(51, 65, 85, 0.45);
-}
-:root[data-accent="slate"][data-theme="dark"] {
-  --color-accent:    #94a3b8;
-  --color-accent-2:  #cbd5e1;
-  --color-accent-fg: #0f1720;
-  --shadow-accent:   0 6px 20px -8px rgba(148, 163, 184, 0.55);
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-accent="slate"]:not([data-theme]) {
-    --color-accent:    #94a3b8;
-    --color-accent-2:  #cbd5e1;
-    --color-accent-fg: #0f1720;
-    --shadow-accent:   0 6px 20px -8px rgba(148, 163, 184, 0.55);
   }
 }
 

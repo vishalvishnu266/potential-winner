@@ -7,8 +7,8 @@ declare const __APP_VERSION__: string;
 /**
  * Settings page — Appearance / Language / Updates.
  *
- * The brand/accent colour is intentionally NOT user-configurable.
- * It's picked once at build time (see `APP_ACCENT` env var).
+ * The brand colour is a fixed emerald green — not user-configurable and
+ * not per-app.  See `packages/theme/src/style.css`.
  */
 export default function SettingsPage() {
     const t = useT();

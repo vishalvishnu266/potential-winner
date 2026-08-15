@@ -8,7 +8,7 @@
  *
  * All app-agnostic concerns (React + Tailwind plugins, monorepo `fs.allow`,
  * shared-package pre-bundling, the `__APP_*__` compile-time globals,
- * `APP_ACCENT` validation, deterministic `APP_VERSION` stamping) live here.
+ * deterministic `APP_VERSION` stamping) live here.
  *
  * The factory is written in plain JS on purpose so it works both when Vite
  * loads it via native ESM and when Node loads it during build tooling.
@@ -21,13 +21,8 @@ import { resolve } from 'node:path';
 
 // -- Shared constants --------------------------------------------------------
 
-const VALID_ACCENTS = new Set([
-    'indigo', 'violet', 'sky', 'emerald', 'amber', 'rose', 'slate',
-]);
-
 const DEFAULT_SHARED_PACKAGES = [
     '@pkg/api-contracts',
-    '@pkg/api-contracts/mock',
     '@pkg/i18n',
     '@pkg/native',
     '@pkg/ota',
@@ -44,17 +39,6 @@ function buildVersion(pkgVersion) {
         `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
         `${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
     return `${pkgVersion}+${stamp}`;
-}
-
-function readAccent() {
-    const raw = (process.env.APP_ACCENT || 'indigo').toLowerCase();
-    if (!VALID_ACCENTS.has(raw)) {
-        throw new Error(
-            `APP_ACCENT="${raw}" is not a valid accent id. ` +
-            `Expected one of: ${[...VALID_ACCENTS].join(', ')}`,
-        );
-    }
-    return raw;
 }
 
 // -- Factory -----------------------------------------------------------------
@@ -83,7 +67,6 @@ export function createAppConfig({
 
     const APP_VERSION = process.env.APP_VERSION || buildVersion(pkg.version);
     const APP_ENV     = process.env.APP_ENV || 'mock';
-    const APP_ACCENT  = readAccent();
     const OTA_HOST    = process.env.OTA_HOST || '192.168.0.4';
     const OTA_PORT    = Number(process.env.OTA_PORT || 3000);
 
@@ -105,7 +88,6 @@ export function createAppConfig({
             __APP_NAME__:    JSON.stringify(appName),
             __APP_VERSION__: JSON.stringify(APP_VERSION),
             __APP_ENV__:     JSON.stringify(APP_ENV),
-            __APP_ACCENT__:  JSON.stringify(APP_ACCENT),
             __OTA_HOST__:    JSON.stringify(OTA_HOST),
             __OTA_PORT__:    JSON.stringify(OTA_PORT),
             ...extraDefine,

@@ -5,6 +5,9 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "dependencies": {
+    "@pkg/native": "*"
+  },
   "peerDependencies": {
     "react": "^18.3.1"
   }

@@ -52,10 +52,10 @@ task-platform/
 │      and `npm run cap:add:ios` inside apps/worker to generate them)
 │
 ├─ packages/                    ← shared code (single source of truth)
-│  ├─ theme/                    Tailwind v4 tokens + seven accent palettes
-│  ├─ native/                   Capacitor wrappers (storage, haptics, useTheme, useAccent, ...)
+│  ├─ theme/                    Tailwind v4 tokens + fixed emerald brand palette
+│  ├─ native/                   Capacitor wrappers (storage, haptics, useTheme, ...)
 │  ├─ i18n/                     generic createI18n({ bundles, defaultLocale })
-│  ├─ api-contracts/            generated typed client + configureApi + /mock subpath
+│  ├─ api-contracts/            generated typed client + configureApi
 │  ├─ ota/                      configureOta, useOta, otaStore, UpdateOverlay (uses api.checkUpdate)
 │  ├─ ui/                       generic <TabBar />, more components to come
 │  └─ vite-config/              createAppConfig({ appName, appDir }) — one factory, both apps
@@ -70,8 +70,7 @@ task-platform/
 │  └─ worker/                   latest.json + vX.zip
 │
 └─ scripts/
-   ├─ build-bundle.mjs          ← now takes --app=<customer|worker>
-   └─ dev.sh
+   └─ build-bundle.mjs          ← takes --app=<customer|worker>
 ```
 
 ### Shared `packages/`
@@ -81,13 +80,13 @@ The app-agnostic shell has been extracted into workspace packages so
 
 | Package              | What lives here                                                                | Consumers                     |
 |----------------------|---------------------------------------------------------------------------------|-------------------------------|
-| `@pkg/theme`         | Tailwind v4 tokens, dark/light surfaces, seven accent palettes (`style.css`).  | Both apps import in `main.tsx`|
-| `@pkg/native`        | Capacitor wrappers: `initNative`, `syncStatusBar`, `hapticTap`, `storage`, `useTheme`, `bootAccent`. | Both apps |
+| `@pkg/theme`         | Tailwind v4 tokens, dark/light surfaces, single fixed emerald brand palette (`style.css`).  | Both apps import in `main.tsx`|
+| `@pkg/native`        | Capacitor wrappers: `initNative`, `syncStatusBar`, `hapticTap`, `storage`, `useTheme`. | Both apps |
 | `@pkg/i18n`          | Generic `createI18n({ bundles, defaultLocale, localeMeta })` factory.          | Each app registers its own bundles |
-| `@pkg/api-contracts` | Generated typed client + `configureApi({ baseUrl })`, plus a `/mock` subpath that intercepts `fetch`. Source of truth: `openapi.json`. | Both apps |
+| `@pkg/api-contracts` | Generated typed client + `configureApi({ baseUrl })`. Source of truth: `openapi.json` (regenerated from the Rust server via `npm run api:sync`). | Both apps |
 | `@pkg/ota`           | `configureOta({ appName })`, `otaClient`, `useOtaStore`, `useOta`, `UpdateOverlay`. Uses `api.checkUpdate` under the hood — no separate HTTP transport. | Both apps |
 | `@pkg/ui`            | Generic `<TabBar tabs={...} getTabForPath={...} />`.                            | Each app supplies its own tab list |
-| `@pkg/vite-config`   | `createAppConfig({ appName, appDir })` — React + Tailwind plugins, monorepo `fs.allow`, shared-package pre-bundling, `__APP_*__` compile-time globals, `APP_ACCENT` validation, `APP_VERSION` stamping. | Both `vite.config.js` files are now one-liners. |
+| `@pkg/vite-config`   | `createAppConfig({ appName, appDir })` — React + Tailwind plugins, monorepo `fs.allow`, shared-package pre-bundling, `__APP_*__` compile-time globals, `APP_VERSION` stamping. | Both `vite.config.js` files are now one-liners. |
 
 Apps consume packages via workspace name imports (`@pkg/native`,
 `@pkg/ota`, etc.). No build step is required — Vite reads the package
@@ -97,33 +96,41 @@ keep dev + typecheck happy.
 
 App-specific pieces stay per-app:
 
-- `apps/<app>/src/data/{types,api,mockApi,realApi}.ts` — each app owns its own `Api` (extending `BaseApi`) and its mock/real implementations. Swap chosen at build time via the `@api-impl` Vite alias, unchanged.
 - `apps/<app>/src/i18n/{en,ta,types}.ts` — each app owns its own message shape and translations.
 - `apps/<app>/src/components/TabBar.tsx` — thin app-flavoured wrapper over `@pkg/ui`'s `TabBar`.
 - `apps/<app>/src/{router,pages}/` — apps' route surface.
 
+Every UI/hook imports the typed API directly from `@pkg/api-contracts` — there is no per-app `data/` layer.  If an app ever needs to decorate requests (auth, retries, logging), pass a custom `fetch` via `configureApi({ fetch })` in that app's `main.tsx`.
+
 ## Install
 
 ```bash
-npm install                      # installs both workspaces at once
+npm install                      # installs both workspaces + runs `api:sync` postinstall
 ```
 
 npm workspaces hoists shared deps into the root `node_modules/`. Each
 app also gets a lightweight `node_modules/` symlink so tools that
 resolve from the app dir (Vite, Capacitor) still work.
 
+The root `postinstall` script runs `npm run api:sync`, which
+regenerates `packages/api-contracts/src/generated/*.gen.ts` from the
+Rust `#[utoipa]` decorations.  These files are **git-ignored** — the
+Rust source is the only committed source of truth for the HTTP
+contract.  If your machine lacks a Rust toolchain the postinstall
+prints a warning and continues; run `npm run api:sync` manually
+before your first typecheck / build.
+
 ## Common workflows
 
 All commands are runnable from the repo root:
 
 ```bash
-# Dev servers (mock API)
+# Rust OTA / health server (start this first — every dev build hits it)
+npm run server
+
+# Dev servers (hit the real Rust backend)
 npm run dev:customer             # -> http://localhost:5173  (customer)
 npm run dev:worker               # -> http://localhost:5173  (worker)
-
-# Dev against the real backend
-npm run dev:customer:real
-npm run dev:worker:real
 
 # Type-check every workspace
 npm run typecheck
@@ -139,12 +146,15 @@ npm run android:worker
 npm run ios:customer
 npm run ios:worker
 
-# OTA bundles — written to bundles/<app>/
+# One-shot OTA release — regen typed stubs from Rust, then build + zip bundle.
+# Output lands in bundles/<app>/vX.zip + latest.json, ready for the server to serve.
+npm run release:ota:customer     # customer only
+npm run release:ota:worker       # worker only
+npm run release:ota              # both apps
+
+# Lower-level OTA bundling (skips api:sync — assumes stubs are current)
 npm run bundle:ota:customer
 npm run bundle:ota:worker
-
-# Rust OTA / health server
-npm run server
 ```
 
 Or run from inside an app directory as before:
@@ -193,12 +203,11 @@ bundles/
     v0.0.0-20260814T120530.zip
 ```
 
-> **Note on the client side:** the client-side OTA call in
-> `apps/customer/src/data/realApi.ts` currently hits
-> `/api/check-update?current=...` — no `app=` param.  The server still
-> serves the customer bundle correctly because `customer` is the
-> default.  Once the worker app starts using OTA, pass `?app=worker`
-> from `apps/worker/src/data/realApi.ts` (single-line change).
+> **Note on the client side:** the OTA client in `@pkg/ota` calls
+> `api.checkUpdate({ query: { app: <appName> } })` — the `appName` is
+> passed once at boot via `configureOta({ appName })` in each app's
+> `main.tsx`, so the server's per-app dispatch works without any
+> per-app HTTP code.
 
 ## API — spec-first, codegen everywhere
 
@@ -227,7 +236,7 @@ packages/api-contracts/src/generated/                     (git-ignored *.gen.ts)
      │  services.gen.ts — one typed function per endpoint
      │  schemas.gen.ts  — runtime schema objects
      ▼
-apps/{customer,worker}/src/data/api.ts  re-exports it
+apps/{customer,worker}/src/**/*  imports it as `@pkg/api-contracts`
 ```
 
 ### The workflow — three commands total
@@ -262,31 +271,18 @@ const { available, url, version } = await api.checkUpdate({
 
 Requests + responses are typed end-to-end.  Change a Rust `#[derive(ToSchema)]` DTO and `tsc --noEmit` will pinpoint every affected call site.
 
-### Mocks — automatic, per-endpoint override
+### No mocks — one source of truth
 
-When `APP_ENV=mock` (the default for `npm run dev:*`), the app installs a
-tiny client-level fetch adapter that intercepts every generated request.
-Default responses are synthesised from the OpenAPI `example` values, so
-**every endpoint has a working mock the moment it's defined** — no
-duplicate hand-written mock file to maintain.
+Every build talks to the real Rust server.  There is no client-side
+mock adapter and no `APP_ENV=mock` code path.  If you need to see the
+UI without a backend running, either stand up the Rust server locally
+(`npm run server`) or hand-write a fixture in the component / hook
+that needs it.
 
-Override any specific endpoint from your app:
-
-```ts
-import { mockOverride } from '@pkg/api-contracts/mock';
-
-mockOverride('check_update', () =>
-    new Response(JSON.stringify({
-        available: true,
-        version: '9.9.9',
-        url: 'http://mock/bundle.zip',
-    }), { status: 200, headers: { 'content-type': 'application/json' } }),
-);
-```
-
-There is no service worker — the adapter is installed via
-`configureApi({ fetch: mockFetch })`, so it works inside a Capacitor
-WebView with zero setup.
+Rationale: the mock adapter we used to have re-derived responses from
+OpenAPI `example` values, which added ~200 lines of parser we owned
+and produced anaemic data that didn't reflect real backend behaviour.
+Deleting it removed a whole drift axis.
 
 ### Docs UI
 
@@ -301,7 +297,7 @@ While the Rust server is running:
 
 1. Add the endpoint to `server/src/api.rs` (Rust — see "API workflow" above).
 2. Run `npm run api:sync` from the repo root.
-3. Call `api.myEndpoint({...})` from `apps/<app>/src/data/api.ts` or directly from your component.
+3. Call `api.myEndpoint({...})` directly from your component or hook (`import { api } from '@pkg/api-contracts'`).
 4. Add i18n keys to `apps/<app>/src/i18n/types.ts` and translate in `en.ts` + `ta.ts`.
 5. Add a new route in `apps/<app>/src/router/index.tsx` and (optionally) a tab in `apps/<app>/src/components/TabBar.tsx`.
 
