@@ -17,7 +17,7 @@ export interface ApiConfig {
     fetch?: typeof fetch;
 }
 
-let current: ApiConfig = { baseUrl: 'http://192.168.0.4:3000' };
+let current: ApiConfig = { baseUrl: 'http://192.168.0.5:3000' };
 
 export function configureApi(patch: Partial<ApiConfig>): void {
     current = { ...current, ...patch };

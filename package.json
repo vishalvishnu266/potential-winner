@@ -29,7 +29,7 @@
     "bundle:ota:customer":  "npm run bundle:ota --workspace @app/customer",
     "bundle:ota:worker":    "npm run bundle:ota --workspace @app/worker",
 
-    "server":               "cd server && cargo run",
+    "server":               "cd server && cargo run --bin server",
 
     "api:export":           "cd server && cargo run --bin export-openapi",
     "api:codegen":          "npm run codegen --workspace @pkg/api-contracts",
