@@ -37,5 +37,8 @@
     "release:ota:customer": "npm run api:sync && npm run bundle:ota:prod --workspace @app/customer",
     "release:ota:worker":   "npm run api:sync && npm run bundle:ota:prod --workspace @app/worker",
     "release:ota":          "npm run api:sync && npm run bundle:ota:prod --workspaces --if-present"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
   }
 }
