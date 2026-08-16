@@ -1,5 +1,5 @@
 window.APP_VERSION = '1.0.0-dev';
-window.APP_NAME = 'taskapp';
+window.APP_NAME = 'customer';
 window.DEFAULT_SERVER_URL = 'http://localhost:3000';
 window.getServerUrl = function() {
     return localStorage.getItem('ota:serverUrl') || window.DEFAULT_SERVER_URL;

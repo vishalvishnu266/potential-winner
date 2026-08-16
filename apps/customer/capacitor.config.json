@@ -1,6 +1,6 @@
 {
-  "appId": "com.example.taskapp",
-  "appName": "taskapp",
+  "appId": "com.yourcompany.customer",
+  "appName": "customer",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

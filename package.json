@@ -4,27 +4,26 @@
   "version": "0.0.0",
   "description": "Two-app platform: customer (post work / find cabs) + worker (freelancer & service-firm ops). Shares a Rust/Axum backend and OTA pipeline.",
   "workspaces": [
-    "task-app-native"
+    "apps/*"
   ],
   "scripts": {
-    "//dev": "── ONE command runs everything: Rust server + dev native app ──",
-    "dev":                  "concurrently -n server,native -c cyan,magenta \"npm:server\" \"npm:dev:native\"",
-    "dev:native":           "echo 'Vanilla JS native app dev mode'",
+    "//dev": "── ONE command runs everything: Rust server + dev web apps ──",
+    "dev":                  "concurrently -n server,customer,worker -c cyan,magenta,yellow \"npm:server\" \"npm:dev:customer\" \"npm:dev:worker\"",
+    "dev:customer":         "echo 'Customer app running in apps/customer/www'",
+    "dev:worker":           "echo 'Worker app running in apps/worker/www'",
 
-    "//server": "── Rust backend on its own ──",
+    "//server": "── Rust backend ──",
     "server":               "cd server && cargo run --bin server",
 
-    "//build": "── Finalize (native app) ──",
-    "build":                "npm run build --workspace task-app-native",
-    "verify":               "npm run build",
-
-    "//native": "── Native (Capacitor) — sync + run ──",
-    "sync:native":          "npm run sync --workspace task-app-native",
-    "android:native":       "npm run android --workspace task-app-native",
-    "ios:native":           "npm run ios --workspace task-app-native",
+    "//native": "── Native (Capacitor) ──",
+    "sync:customer":        "npm run sync --workspace @app/customer",
+    "android:customer":     "npm run android --workspace @app/customer",
+    "sync:worker":          "npm run sync --workspace @app/worker",
+    "android:worker":       "npm run android --workspace @app/worker",
 
     "//release": "── One-shot OTA release ──",
-    "release:ota:native":   "npm run bundle:ota --workspace task-app-native"
+    "release:ota:customer": "npm run bundle:ota --workspace @app/customer",
+    "release:ota:worker":   "npm run bundle:ota --workspace @app/worker"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

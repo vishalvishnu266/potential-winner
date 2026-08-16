@@ -403,7 +403,7 @@ class TaskItemComponentBuilder {
 class TaskView {
     static async render() {
         const container = VerticalLayout();
-        container.add(H2('Task Manager'));
+        container.add(H2('Customer: Find Help'));
 
         const taskInput = new TextField('Add new task...');
         const addButton = new Button('Add Task', async () => {

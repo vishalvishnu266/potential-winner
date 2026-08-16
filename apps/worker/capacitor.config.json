@@ -1,0 +1,14 @@
+{
+  "appId": "com.yourcompany.worker",
+  "appName": "worker",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "stats": false
+    }
+  }
+}
