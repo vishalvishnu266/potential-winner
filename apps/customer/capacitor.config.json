@@ -1,6 +1,6 @@
 {
-  "appId": "com.yourcompany.customer",
-  "appName": "customer",
+  "appId": "com.erp.customer",
+  "appName": "ERPCustomer",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

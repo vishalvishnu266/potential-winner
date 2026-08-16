@@ -1,6 +1,6 @@
 {
-  "appId": "com.yourcompany.worker",
-  "appName": "worker",
+  "appId": "com.erp.worker",
+  "appName": "ERPWorker",
   "webDir": "www",
   "server": {
     "androidScheme": "https"

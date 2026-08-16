@@ -1,8 +1,8 @@
 {
-  "name": "task-platform",
+  "name": "erp-platform",
   "private": true,
-  "version": "0.0.0",
-  "description": "Two-app platform: customer (post work / find cabs) + worker (freelancer & service-firm ops). Shares a Rust/Axum backend and OTA pipeline.",
+  "version": "1.0.0",
+  "description": "Vanilla JS ERP Platform (Customer + Worker). Shared Rust backend and OTA pipeline.",
   "workspaces": [
     "apps/*"
   ],

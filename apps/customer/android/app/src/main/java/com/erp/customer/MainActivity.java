@@ -1,4 +1,4 @@
-package com.example.taskapp;
+package com.erp.customer;
 
 import com.getcapacitor.BridgeActivity;
 

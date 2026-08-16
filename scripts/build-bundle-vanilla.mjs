@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process';
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,15 +23,22 @@ if (!app || !['customer', 'worker'].includes(app)) {
 }
 
 const appDir = join(root, 'apps', app);
-const pkg = JSON.parse(readFileSync(join(appDir, 'package.json'), 'utf-8'));
+const sharedDir = join(root, 'packages', 'shared', 'www', 'js');
+const appJsDir = join(appDir, 'www', 'js');
 
+// 1. Sync shared logic before bundling
+console.log(`[bundle] Syncing shared logic to ${app}...`);
+copyFileSync(join(sharedDir, 'app-core.js'), join(appJsDir, 'app-core.js'));
+copyFileSync(join(sharedDir, 'ota.js'), join(appJsDir, 'ota.js'));
+
+const pkg = JSON.parse(readFileSync(join(appDir, 'package.json'), 'utf-8'));
 const pad = (n) => String(n).padStart(2, '0');
 const now = new Date();
 const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
               `${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
 const version = `${pkg.version}-${stamp}`;
 
-const versionJsPath = join(appDir, 'www', 'js', 'version.js');
+const versionJsPath = join(appJsDir, 'version.js');
 const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
 writeFileSync(versionJsPath, `window.APP_VERSION = '${version}';
 window.APP_NAME = '${app}';

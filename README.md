@@ -1,6 +1,6 @@
-# Vanilla Task Platform
+# Vanilla ERP Platform
 
-A lightweight mobile platform built with a custom Vanilla JS framework and Capacitor, backed by a Rust/Axum server.
+A lightweight ERP platform built with a custom Vanilla JS framework and Capacitor, backed by a Rust/Axum server.
 
 ## Project Structure
 
