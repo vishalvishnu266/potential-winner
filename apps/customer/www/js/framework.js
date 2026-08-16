@@ -1,35 +1,6 @@
 /**
- * ERP Core - Vanilla JS Framework & Native Bridge
+ * ERP Framework - Vanilla JS Component System
  */
-
-// =========================================================================
-// 1. NATIVE BRIDGE
-// =========================================================================
-class NativeService {
-    static async vibrate() {
-        try {
-            if (window.Capacitor?.isPluginAvailable('Haptics')) {
-                const { Haptics } = window.Capacitor.Plugins;
-                await Haptics.vibrate();
-            } else if ('vibrate' in navigator) {
-                navigator.vibrate(50);
-            }
-        } catch (e) { console.log('Haptics unavailable', e); }
-    }
-
-    static async showToast(message) {
-        try {
-            if (window.Capacitor?.isPluginAvailable('Toast')) {
-                const { Toast } = window.Capacitor.Plugins;
-                await Toast.show({ text: message });
-            } else { console.log(`[App Toast]: ${message}`); }
-        } catch (e) { console.log('Toast unavailable', e); }
-    }
-}
-
-// =========================================================================
-// 2. VANILLA FRAMEWORK
-// =========================================================================
 class Component {
     constructor(tagOrElement) {
         this.el = typeof tagOrElement === 'string' ? document.createElement(tagOrElement) : tagOrElement;
@@ -81,31 +52,14 @@ customElements.define('v-textfield', class extends HTMLElement {
     set value(val) { this._input.value = val; }
 });
 
-const VerticalLayout = (...c) => new Component('v-layout').attr('direction', 'vertical').add(...c);
-const HorizontalLayout = (...c) => new Component('v-layout').attr('direction', 'horizontal').add(...c);
-const Card = (...c) => new Component('v-card').add(...c);
-const H1 = (txt) => new Component('h1').text(txt);
-const H2 = (txt) => new Component('h2').text(txt);
-const Text = (txt) => new Component('span').text(txt);
-const Paragraph = (txt) => new Component('p').text(txt);
-class Button extends Component { constructor(text, onClickHandler, variant = 'primary') { super('v-button'); this.text(text); if (variant !== 'primary') this.attr('variant', variant); if (onClickHandler) this.onClick(onClickHandler); } }
-class TextField extends Component { constructor(placeholder = '') { super('v-textfield'); if (placeholder) this.attr('placeholder', placeholder); } getValue() { return this.el.value; } setValue(val) { this.el.value = val; return this; } }
-
-// =========================================================================
-// 3. COMMON SERVICES
-// =========================================================================
-class ERPService {
-    static get serverUrl() { return window.getServerUrl(); }
-    
-    static async syncWithRemoteServer() {
-        if (!navigator.onLine) return;
-        try {
-            // Simplified heartbeat/check
-            const res = await fetch(`${this.serverUrl}/api/health`);
-            if (res.ok) {
-                console.log('[ERP] Server online');
-                if (AppRouter.renderCurrentRoute) AppRouter.renderCurrentRoute();
-            }
-        } catch (err) { console.log('[ERP] Server offline'); }
-    }
-}
+window.Component = Component;
+window.updateDOM = updateDOM;
+window.VerticalLayout = (...c) => new Component('v-layout').attr('direction', 'vertical').add(...c);
+window.HorizontalLayout = (...c) => new Component('v-layout').attr('direction', 'horizontal').add(...c);
+window.Card = (...c) => new Component('v-card').add(...c);
+window.H1 = (txt) => new Component('h1').text(txt);
+window.H2 = (txt) => new Component('h2').text(txt);
+window.Text = (txt) => new Component('span').text(txt);
+window.Paragraph = (txt) => new Component('p').text(txt);
+window.Button = class Button extends Component { constructor(text, onClickHandler, variant = 'primary') { super('v-button'); this.text(text); if (variant !== 'primary') this.attr('variant', variant); if (onClickHandler) this.onClick(onClickHandler); } };
+window.TextField = class TextField extends Component { constructor(placeholder = '') { super('v-textfield'); if (placeholder) this.attr('placeholder', placeholder); } getValue() { return this.el.value; } setValue(val) { this.el.value = val; return this; } };

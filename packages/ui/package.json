@@ -1,0 +1,16 @@
+{
+  "name": "@pkg/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/erp-ui.js",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "lit": "^3.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.1.0"
+  }
+}

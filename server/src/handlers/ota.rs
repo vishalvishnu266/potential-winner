@@ -110,8 +110,9 @@ pub async fn check_update(Query(params): Query<UpdateQuery>) -> impl IntoRespons
                 .map(|c| normalize_version(c) == normalize_version(&version))
                 .unwrap_or(false);
             let available = !same;
-            let url = format!("{}/bundles/{}/{}", public_base_url(), app, file);
-            tracing::info!(app = %app, latest = %version, available, url = %url, "OTA check");
+            // Return relative path instead of absolute URL
+            let url = format!("/bundles/{}/{}", app, file);
+            tracing::info!(app = %app, latest = %version, available, path = %url, "OTA check");
             Json(CheckUpdateResponse {
                 available,
                 version: Some(version),

@@ -44,7 +44,14 @@
                 attemptedVersions.add(data.version);
 
                 console.log(`[OTA] New version available: ${data.version}`);
-                await this.applyUpdate(data.url, data.version);
+                
+                // Construct absolute URL from relative path if needed
+                let downloadUrl = data.url;
+                if (downloadUrl.startsWith('/')) {
+                    downloadUrl = serverUrl + downloadUrl;
+                }
+
+                await this.applyUpdate(downloadUrl, data.version);
             } catch (err) {
                 console.error('[OTA] Check failed', err);
                 if (!silent) NativeService.showToast('Update check failed');

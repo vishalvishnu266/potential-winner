@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execSync } from 'node:child_process';
-import { mkdirSync, existsSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync, writeFileSync, copyFileSync, readdirSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,8 +28,10 @@ const appJsDir = join(appDir, 'www', 'js');
 
 // 1. Sync shared logic before bundling
 console.log(`[bundle] Syncing shared logic to ${app}...`);
-copyFileSync(join(sharedDir, 'app-core.js'), join(appJsDir, 'app-core.js'));
-copyFileSync(join(sharedDir, 'ota.js'), join(appJsDir, 'ota.js'));
+const files = readdirSync(sharedDir).filter(f => f.endsWith('.js'));
+for (const file of files) {
+    copyFileSync(join(sharedDir, file), join(appJsDir, file));
+}
 
 const pkg = JSON.parse(readFileSync(join(appDir, 'package.json'), 'utf-8'));
 const pad = (n) => String(n).padStart(2, '0');
@@ -39,7 +41,7 @@ const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.get
 const version = `${pkg.version}-${stamp}`;
 
 const versionJsPath = join(appJsDir, 'version.js');
-const serverUrl = process.env.SERVER_URL || 'http://192.162.0.5:3000';
+const serverUrl = process.env.SERVER_URL || 'http://192.168.0.5:3000';
 writeFileSync(versionJsPath, `window.APP_VERSION = '${version}';
 window.APP_NAME = '${app}';
 window.DEFAULT_SERVER_URL = '${serverUrl}';
