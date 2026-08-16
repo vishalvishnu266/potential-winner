@@ -15,7 +15,7 @@
 
     "//server": "── Rust backend ──",
     "server":               "cd server && cargo run --bin server",
-    "server:prod":          "cross-env PUBLIC_HOST=192.162.0.5 cd server && cargo run --bin server",
+    "server:prod":          "cross-env PUBLIC_HOST=192.162.0.5 cargo run --bin server --manifest-path server/Cargo.toml",
 
     "//native": "── Native (Capacitor) ──",
     "sync:shared":          "node scripts/sync-shared.mjs",
