@@ -10,7 +10,7 @@
 
     <style>
         :root {
-            --primary: #0066cc;
+            --primary: #ccbb00;
             --danger: #dc3545;
             --success: #28a745;
             --bg: #f4f5f7;
@@ -116,47 +116,34 @@
         removeAll() { this.el.innerHTML = ''; return this; }
     }
 
-    // Declarative Reactive Stream Element
-    class VStream extends HTMLElement {
-        connectedCallback() {
-            const action = this.getAttribute('action');
-            const targetId = this.getAttribute('target');
-            const targetEl = document.getElementById(targetId);
+    // Direct DOM manipulation function replacing custom events and <v-stream>
+    function updateDOM(action, targetId, childComponentOrElement) {
+        const targetEl = document.getElementById(targetId);
+        if (!targetEl && action !== 'remove') return;
 
-            if (!targetEl && action !== 'remove') {
-                this.remove();
-                return;
-            }
+        let node = null;
+        if (childComponentOrElement) {
+            node = childComponentOrElement instanceof Component
+                ? childComponentOrElement.el
+                : childComponentOrElement;
+        }
 
-            const nodes = Array.from(this.childNodes);
-
-            switch (action) {
-                case 'prepend':
-                    nodes.reverse().forEach(n => targetEl.insertBefore(n, targetEl.firstChild));
-                    break;
-                case 'replace':
-                    if (nodes.length > 0) targetEl.replaceWith(nodes[0]);
-                    break;
-                case 'update':
-                    targetEl.innerHTML = '';
-                    nodes.forEach(n => targetEl.appendChild(n));
-                    break;
-                case 'remove':
-                    const elToRemove = document.getElementById(targetId);
-                    if (elToRemove) elToRemove.remove();
-                    break;
-            }
-            this.remove();
+        switch (action) {
+            case 'prepend':
+                if (node) targetEl.insertBefore(node, targetEl.firstChild);
+                break;
+            case 'replace':
+                if (node) targetEl.replaceWith(node);
+                break;
+            case 'update':
+                targetEl.innerHTML = '';
+                if (node) targetEl.appendChild(node);
+                break;
+            case 'remove':
+                if (targetEl) targetEl.remove();
+                break;
         }
     }
-    customElements.define('v-stream', VStream);
-
-    const Stream = (action, targetId, child) => {
-        const streamEl = new Component('v-stream').attr('action', action).attr('target', targetId);
-        if (child) streamEl.add(child);
-        document.body.appendChild(streamEl.el);
-        return streamEl;
-    };
 
     customElements.define('v-layout', class extends HTMLElement {
         connectedCallback() {
@@ -323,7 +310,7 @@
     }
 
     // =========================================================================
-    // 4. SERVICE LAYER (EVENT PUBLISHER + NATIVE INTEGRATION)
+    // 4. SERVICE LAYER (DIRECT DOM REPLACEMENT + NATIVE INTEGRATION)
     // =========================================================================
     class TaskService {
         constructor(repository) {
@@ -331,13 +318,9 @@
             this.serverUrl = 'http://localhost:3000';
         }
 
-        async publishCountChangeEvent() {
+        async updateCountBadge() {
             const tasks = await this.getTasks();
-            const totalCount = tasks.length;
-
-            // Dispatch event for components & update Cart Badge
-            window.dispatchEvent(new CustomEvent('task-count-updated', { detail: { count: totalCount } }));
-            Stream('update', 'cart-count-badge', Text(`${totalCount}`));
+            updateDOM('update', 'cart-count-badge', Text(`${tasks.length}`));
         }
 
         async getTasks() {
@@ -347,7 +330,7 @@
         async createTask(title) {
             const task = new Task({ title, synced: 0 });
             await this.taskRepository.save(task);
-            await this.publishCountChangeEvent();
+            await this.updateCountBadge();
 
             // Native device capabilities trigger
             await NativeService.vibrate();
@@ -357,13 +340,13 @@
 
         async updateTask(task) {
             const updated = await this.taskRepository.save(task);
-            await this.publishCountChangeEvent();
+            await this.updateCountBadge();
             return updated;
         }
 
         async deleteTask(id) {
             await this.taskRepository.deleteById(id);
-            await this.publishCountChangeEvent();
+            await this.updateCountBadge();
             await NativeService.vibrate();
             await NativeService.showToast('Task deleted');
             if (navigator.onLine) {
@@ -398,7 +381,7 @@
                 if (getRes.ok) {
                     const { tasks: serverTasks } = await getRes.json();
                     await this.taskRepository.saveAllAndClear(serverTasks);
-                    await this.publishCountChangeEvent();
+                    await this.updateCountBadge();
                     await NativeService.showToast('Server sync completed');
                     AppRouter.renderCurrentRoute();
                 }
@@ -418,11 +401,6 @@
         constructor() {
             super('span');
             this.addClass('cart-badge').id('cart-count-badge').text('0');
-
-            window.addEventListener('task-count-updated', (e) => {
-                this.text(`${e.detail.count}`);
-            });
-
             taskService.getTasks().then(tasks => this.text(`${tasks.length}`));
         }
     }
@@ -441,7 +419,7 @@
                         task.synced = 0;
                         delete task.editing;
                         await taskService.updateTask(task);
-                        Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                        updateDOM('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
                         taskService.syncWithRemoteServer();
                     }
                 });
@@ -449,7 +427,7 @@
                 const cancelBtn = new Button('Cancel', async () => {
                     delete task.editing;
                     await taskService.updateTask(task);
-                    Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                    updateDOM('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
                 }, 'secondary');
 
                 li.add(HorizontalLayout(editInput, saveBtn, cancelBtn).addClass('edit-mode'));
@@ -460,12 +438,12 @@
                 const editBtn = new Button('Edit', async () => {
                     task.editing = true;
                     await taskService.updateTask(task);
-                    Stream('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
+                    updateDOM('replace', `task-${task.id}`, TaskItemComponentBuilder.build(task));
                 }, 'secondary');
 
                 const deleteBtn = new Button('Delete', async () => {
                     await taskService.deleteTask(task.id);
-                    Stream('remove', `task-${task.id}`);
+                    updateDOM('remove', `task-${task.id}`);
                 }, 'danger');
 
                 const actions = HorizontalLayout(badge, editBtn, deleteBtn).addClass('actions');
@@ -489,7 +467,7 @@
                 const newTask = await taskService.createTask(title);
                 taskInput.clear();
 
-                Stream('prepend', 'task-list', TaskItemComponentBuilder.build(newTask));
+                updateDOM('prepend', 'task-list', TaskItemComponentBuilder.build(newTask));
                 taskService.syncWithRemoteServer();
             });
 
