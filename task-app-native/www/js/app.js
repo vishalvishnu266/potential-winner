@@ -259,7 +259,10 @@ class TaskRepository {
 class TaskService {
     constructor(repository) {
         this.taskRepository = repository;
-        this.serverUrl = 'http://localhost:3000';
+    }
+
+    get serverUrl() {
+        return window.getServerUrl();
     }
 
     async updateCountBadge() {
@@ -432,14 +435,29 @@ class SyncSettingsView {
     static async render() {
         const tasks = await taskService.getTasks();
         const pending = tasks.filter(t => !t.synced).length;
-
         const versionStr = window.APP_VERSION || '1.0.0-dev';
+        const currentServer = window.getServerUrl();
+
+        const serverInput = new TextField('Server URL (http://ip:3000)').setValue(currentServer);
+        
+        const saveServerBtn = new Button('Save Server URL', async () => {
+            const url = serverInput.getValue().trim();
+            if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+                window.setServerUrl(url);
+                await NativeService.showToast('Server URL updated');
+                AppRouter.renderCurrentRoute();
+            } else {
+                await NativeService.showToast('Invalid URL (must start with http/https)');
+            }
+        }, 'secondary');
 
         return VerticalLayout(
             H2('Settings'),
             Paragraph(`Database Engine: IndexedDB (TaskRepository)`),
             Paragraph(`Unsynced Tasks: ${pending}`),
             Paragraph(`App Version: ${versionStr}`),
+            Paragraph('OTA Server Configuration:'),
+            HorizontalLayout(serverInput, saveServerBtn),
             new Button('Sync with Backend', async () => {
                 await taskService.syncWithRemoteServer();
             }),

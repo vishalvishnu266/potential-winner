@@ -29,7 +29,8 @@
             try {
                 const current = await this.getCurrentVersion();
                 const app = window.APP_NAME || 'taskapp';
-                const url = `${window.SERVER_URL}/api/check-update?app=${app}&current=${current}`;
+                const serverUrl = window.getServerUrl();
+                const url = `${serverUrl}/api/check-update?app=${app}&current=${current}`;
 
                 const res = await fetch(url);
                 const data = await res.json();

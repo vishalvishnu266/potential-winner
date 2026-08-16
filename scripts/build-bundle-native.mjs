@@ -41,7 +41,17 @@ console.log(`[bundle-native] app=${app} version=${version}`);
 // ---- stamp version.js ------------------------------------------------------
 const versionJsPath = join(appDir, 'www', 'js', 'version.js');
 const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
-const versionJsContent = `window.APP_VERSION = '${version}';\nwindow.APP_NAME = '${app}';\nwindow.SERVER_URL = '${serverUrl}';\n`;
+const versionJsContent = `window.APP_VERSION = '${version}';
+window.APP_NAME = '${app}';
+window.DEFAULT_SERVER_URL = '${serverUrl}';
+window.getServerUrl = function() {
+    return localStorage.getItem('ota:serverUrl') || window.DEFAULT_SERVER_URL;
+};
+window.setServerUrl = function(url) {
+    if (url) localStorage.setItem('ota:serverUrl', url);
+    else localStorage.removeItem('ota:serverUrl');
+};
+`;
 writeFileSync(versionJsPath, versionJsContent);
 console.log(`[bundle-native] Stamped ${versionJsPath}`);
 
