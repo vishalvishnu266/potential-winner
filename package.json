@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "Vanilla JS ERP Platform (Customer + Worker). Shared Rust backend and OTA pipeline.",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "//dev": "── ONE command runs everything: Rust server + dev web apps ──",
