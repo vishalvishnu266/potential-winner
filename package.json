@@ -17,9 +17,10 @@
     "server":               "cd server && cargo run --bin server",
 
     "//native": "── Native (Capacitor) ──",
-    "sync:customer":        "npm run sync --workspace @app/customer",
+    "sync:shared":          "node scripts/sync-shared.mjs",
+    "sync:customer":        "npm run sync:shared && npm run sync --workspace @app/customer",
     "android:customer":     "npm run android --workspace @app/customer",
-    "sync:worker":          "npm run sync --workspace @app/worker",
+    "sync:worker":          "npm run sync:shared && npm run sync --workspace @app/worker",
     "android:worker":       "npm run android --workspace @app/worker",
 
     "//release": "── One-shot OTA release ──",
