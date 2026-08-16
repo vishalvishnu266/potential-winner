@@ -22,9 +22,9 @@ pub struct UpdateQuery {
     /// Version the client currently has installed.
     #[schema(example = "0.0.0-20260814T120500")]
     current: Option<String>,
-    /// Which app is asking — `customer` or `worker`.  Maps to a
+    /// Which app is asking — `taskapp`, `customer`, or `worker`.  Maps to a
     /// `bundles/<app>/` sub-directory on disk.
-    #[schema(example = "customer")]
+    #[schema(example = "taskapp")]
     app: Option<String>,
     /// Reserved for future release channels (`stable`, `beta`, …).
     #[allow(dead_code)]

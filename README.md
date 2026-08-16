@@ -55,7 +55,7 @@ task-platform/
 │  ├─ theme/                    Tailwind v4 tokens + fixed emerald brand palette
 │  ├─ native/                   Capacitor wrappers (storage, haptics, useTheme, ...)
 │  ├─ i18n/                     generic createI18n({ bundles, defaultLocale })
-│  ├─ api-contracts/            hand-rolled fetch client + `openapi-typescript`-generated types
+│  ├─ api-contracts/            hand-rolled types + fetch client (no codegen, no runtime deps)
 │  ├─ ota/                      configureOta, useOta, otaStore, UpdateOverlay (uses api.checkUpdate)
 │  ├─ ui/                       generic <TabBar />, more components to come
 │  └─ vite-config/              createAppConfig({ appName, appDir }) — one factory, both apps
@@ -69,7 +69,7 @@ task-platform/
 │     ├─ routes.rs              ← URL → handler wiring
 │     ├─ handlers/              ← one file per resource (health, ota, ...)
 │     ├─ middleware/            ← cors, tracing, request-id
-│     └─ bin/export_openapi.rs  ← dumps openapi.json for TS codegen
+│     └─ bin/export_openapi.rs  ← dumps openapi.json for external consumers (optional)
 │
 ├─ bundles/                     ← generated OTA bundles, per-app subfolders
 │  ├─ customer/                 latest.json + vX.zip
@@ -89,7 +89,7 @@ The app-agnostic shell has been extracted into workspace packages so
 | `@pkg/theme`         | Tailwind v4 tokens, dark/light surfaces, single fixed emerald brand palette (`style.css`).  | Both apps import in `main.tsx`|
 | `@pkg/native`        | Capacitor wrappers: `initNative`, `syncStatusBar`, `hapticTap`, `storage`, `useTheme`. | Both apps |
 | `@pkg/i18n`          | Generic `createI18n({ bundles, defaultLocale, localeMeta })` factory.          | Each app registers its own bundles |
-| `@pkg/api-contracts` | Hand-rolled ~40-line fetch client + `configureApi({ baseUrl })`. Types generated from `openapi.json` by `openapi-typescript` (no runtime client library). | Both apps |
+| `@pkg/api-contracts` | Fully hand-rolled: TypeScript interfaces mirror the Rust DTOs, one-file `fetch` wrapper, no codegen and no third-party runtime deps. When you edit a Rust route, mirror the shape here (10-second copy). | Both apps |
 | `@pkg/ota`           | `configureOta({ appName })`, `otaClient`, `useOtaStore`, `useOta`, `UpdateOverlay`. Uses `api.checkUpdate` under the hood — no separate HTTP transport. | Both apps |
 | `@pkg/ui`            | Generic `<TabBar tabs={...} getTabForPath={...} />`.                            | Each app supplies its own tab list |
 | `@pkg/vite-config`   | `createAppConfig({ appName, appDir })` — React + Tailwind plugins, monorepo `fs.allow`, shared-package pre-bundling, `__APP_*__` compile-time globals, `APP_VERSION` stamping. | Both `vite.config.js` files are now one-liners. |
@@ -111,25 +111,19 @@ Every UI/hook imports the typed API directly from `@pkg/api-contracts` — there
 ## Install
 
 ```bash
-npm install                      # installs both workspaces + runs `api:sync` postinstall
+npm install                      # installs both workspaces, no codegen
 ```
 
 npm workspaces hoists shared deps into the root `node_modules/`. Each
 app also gets a lightweight `node_modules/` symlink so tools that
 resolve from the app dir (Vite, Capacitor) still work.
 
-The root `postinstall` script runs `npm run api:codegen`, which
-regenerates `packages/api-contracts/src/generated/*.gen.ts` from the
-**committed** `packages/api-contracts/openapi.json`.  These generated
-files are git-ignored — the OpenAPI JSON is the committed source of
-truth.  No Rust toolchain is needed to develop the frontend.
-
-When you *edit the Rust API* (add/change a handler or DTO), run
-`npm run api:sync` — that first regenerates `openapi.json` from the
-Rust `#[utoipa]` decorations (via `cargo run --bin export-openapi`),
-then runs `api:codegen`.  Commit the updated `openapi.json` along
-with your Rust change so everyone else's `postinstall` picks it up
-automatically.
+There is **no codegen step**. `packages/api-contracts/src/index.ts`
+is hand-written: it declares TS interfaces that mirror the Rust DTOs
+and a small `fetch` wrapper.  When you add/change a Rust route,
+mirror the shape here — that's a 10-second copy.  The Rust server
+still exposes `/api-docs/openapi.json` and Scalar docs at `/docs`
+for humans/external consumers to explore.
 
 ## Common workflows
 
@@ -165,8 +159,7 @@ npm run release:ota:customer     # customer only
 npm run release:ota:worker       # worker only
 npm run release:ota              # both apps
 
-# Lower-level OTA bundling (skips api:sync — assumes stubs are current).
-# Runs from inside the app dir:
+# Lower-level OTA bundling — runs from inside the app dir:
 cd apps/customer && npm run bundle:ota
 cd apps/worker   && npm run bundle:ota
 ```
@@ -258,9 +251,9 @@ apps/{customer,worker}/src/**/*  imports it as `@pkg/api-contracts`
 ### The workflow — three commands total
 
 ```bash
-npm run api:export         # Rust → openapi.json
-npm run api:codegen        # openapi.json → TS client + types
-npm run api:sync           # both, in order (use this)
+cd server && cargo run --bin export-openapi   # regenerates openapi.json
+                                              # (only needed if you serve it
+                                              # to external consumers)
 ```
 
 Add a new endpoint:
@@ -269,7 +262,7 @@ Add a new endpoint:
 2. Register the module: `pub mod <resource>;` in `server/src/handlers/mod.rs`.
 3. Wire the route: one line in `server/src/routes.rs` — `.routes(routes!(handlers::<resource>::<handler>))`.
 4. If the DTO isn't reachable from an existing handler, add it to `components(schemas(...))` in `server/src/openapi.rs`.
-5. From the repo root: `npm run api:sync`.
+5. In `packages/api-contracts/src/index.ts`, add matching TS interfaces (request query/body + response) and a one-line entry in the `api` object.
 6. `api.myHandler({...})` is now callable and fully typed in both apps.
 
 ### Calling the API
@@ -307,14 +300,14 @@ Deleting it removed a whole drift axis.
 While the Rust server is running:
 
 - `http://localhost:3000/docs`                — Scalar interactive docs
-- `http://localhost:3000/api-docs/openapi.json` — the raw spec
+- `http://localhost:3000/api-docs/openapi.json` — the raw spec (auto-served from the Rust `#[utoipa]` decorations)
 
 ## Adding a feature (checklist)
 
 **Per-app (customer OR worker only):**
 
 1. Add the endpoint under `server/src/handlers/` (Rust — see "API workflow" above).
-2. Run `npm run api:sync` from the repo root.
+2. Mirror the change in `packages/api-contracts/src/index.ts` (a few TS interfaces + one line in the `api` object).
 3. Call `api.myEndpoint({...})` directly from your component or hook (`import { api } from '@pkg/api-contracts'`).
 4. Add i18n keys to `apps/<app>/src/i18n/types.ts` and translate in `en.ts` + `ta.ts`.
 5. Add a new route in `apps/<app>/src/router/index.tsx` and (optionally) a tab in `apps/<app>/src/components/TabBar.tsx`.
@@ -324,7 +317,7 @@ While the Rust server is running:
 - **UI primitive** used identically in both apps → add to `@pkg/ui` (presentation-only + generic).
 - **Native side-effect** (permissions, plugin wrapper) → add to `@pkg/native`.
 - **New i18n key that both apps need** → for now, add to each app's `i18n/types.ts` (their `Messages` shapes are per-app so they can diverge). If a truly shared string emerges, we can lift a `SharedMessages` type into `@pkg/i18n`.
-- **Anything the API returns** → already shared — it lives in `@pkg/api-contracts/src/generated/`, regenerated from Rust.
+- **Anything the API returns** → already shared — it lives in `@pkg/api-contracts/src/index.ts` (hand-written TS interfaces that mirror the Rust DTOs).
 
 ## Install & run
 

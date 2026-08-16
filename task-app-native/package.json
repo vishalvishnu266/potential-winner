@@ -1,0 +1,24 @@
+{
+  "name": "task-app-native",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vanilla JS Task App with Capacitor and OTA updates",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap run android",
+    "ios": "cap run ios",
+    "build": "echo 'No build step for vanilla JS'",
+    "bundle:ota": "node ../scripts/build-bundle-native.mjs --app=taskapp"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/app": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/haptics": "^6.0.0",
+    "@capacitor/toast": "^6.0.0",
+    "@capgo/capacitor-updater": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

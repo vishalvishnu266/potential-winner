@@ -1,0 +1,14 @@
+{
+  "appId": "com.example.taskapp",
+  "appName": "taskapp",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "stats": false
+    }
+  }
+}
