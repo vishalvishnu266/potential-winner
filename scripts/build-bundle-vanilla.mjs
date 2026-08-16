@@ -39,7 +39,7 @@ const stamp = `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.get
 const version = `${pkg.version}-${stamp}`;
 
 const versionJsPath = join(appJsDir, 'version.js');
-const serverUrl = process.env.SERVER_URL || 'http://localhost:3000';
+const serverUrl = process.env.SERVER_URL || 'http://192.162.0.5:3000';
 writeFileSync(versionJsPath, `window.APP_VERSION = '${version}';
 window.APP_NAME = '${app}';
 window.DEFAULT_SERVER_URL = '${serverUrl}';

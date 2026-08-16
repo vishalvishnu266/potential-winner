@@ -1,6 +1,6 @@
 window.APP_VERSION = '1.0.0-dev';
 window.APP_NAME = 'customer';
-window.DEFAULT_SERVER_URL = 'http://localhost:3000';
+window.DEFAULT_SERVER_URL = 'http://192.162.0.5:3000';
 window.getServerUrl = function() {
     return localStorage.getItem('ota:serverUrl') || window.DEFAULT_SERVER_URL;
 };
