@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TaskApp</string>
-    <string name="title_activity_main">TaskApp</string>
-    <string name="package_name">com.example.taskapp</string>
-    <string name="custom_url_scheme">com.example.taskapp</string>
+    <string name="app_name">ERPWorker</string>
+    <string name="title_activity_main">ERPWorker</string>
+    <string name="package_name">com.erp.worker</string>
+    <string name="custom_url_scheme">com.erp.worker</string>
 </resources>
