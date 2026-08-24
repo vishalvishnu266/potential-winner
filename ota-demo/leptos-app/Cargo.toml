@@ -16,6 +16,7 @@ serde-wasm-bindgen = "0.6"
 version = "0.3"
 features = [
   "Window",
+  "Navigator",    # <-- Add this feature
   "Request",
   "RequestInit",
   "RequestMode",

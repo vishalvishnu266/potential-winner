@@ -119,6 +119,8 @@ async fn vibrate() -> Result<(), JsValue> {
 
 // ---------- UI (builder-style Leptos) ----------
 
+// ---------- UI (builder-style Leptos) ----------
+
 fn app() -> impl IntoView {
     let (status, set_status) = create_signal(String::from("Idle."));
     let (server_ver, set_server_ver) = create_signal(String::from("?"));
@@ -182,44 +184,35 @@ fn app() -> impl IntoView {
         });
     };
 
-    // ---- builder syntax: no view! macro anywhere ----
+    // ---- builder syntax: no styles attached anywhere ----
     div()
-        .style("font-family:system-ui;padding:24px;max-width:640px;margin:auto")
         .child(h1().child("Leptos + Axum OTA demo"))
         .child(
             p().child("Bundled version: ")
-                .child(pre().style("display:inline").child(BUNDLED_VERSION))
+                .child(pre().child(BUNDLED_VERSION))
                 .child(" | Installed: ")
-                .child(pre().style("display:inline").child(local_ver))
+                .child(pre().child(local_ver))
                 .child(" | Server: ")
-                .child(pre().style("display:inline").child(move || server_ver.get())),
+                .child(pre().child(move || server_ver.get())),
         )
         .child(
             div()
-                .style("display:flex;gap:8px;margin:16px 0")
                 .child(
                     button()
-                        .style("padding:12px 16px;font-size:16px")
                         .on(ev::click, on_check)
                         .child("Check for update"),
                 )
                 .child(
                     button()
-                        .style("padding:12px 16px;font-size:16px")
                         .on(ev::click, on_vibrate)
                         .child("Vibrate (native)"),
                 ),
         )
         .child(
             pre()
-                .style(
-                    "background:#111;color:#0f0;padding:12px;border-radius:8px;\
-                     white-space:pre-wrap;word-break:break-all",
-                )
                 .child(move || status.get()),
         )
 }
-
 fn main() {
     // Surface Rust panics in the browser console during development.
     std::panic::set_hook(Box::new(|info| {
