@@ -112,16 +112,47 @@ fn is_text_path(p: &str) -> bool {
         || p.ends_with(".map")
 }
 
+/// Pure-Rust base64 encoder (standard alphabet, with `=` padding).
+///
+/// We intentionally avoid the previous `js_sys::eval(format!("btoa({:?})", …))`
+/// approach: `{:?}` on a Rust `String` emits octal escapes like `"\001"` for
+/// control bytes, and JavaScript strict mode (which WASM-hosted `eval` runs
+/// under) rejects octal escape sequences with:
+///     "Octal escape sequences are not allowed in strict mode."
+/// That blew up "Check for update" as soon as the first binary (WASM) file
+/// was downloaded. Encoding in Rust sidesteps `eval` entirely.
 fn base64_encode(bytes: &[u8]) -> Result<String, JsValue> {
-    let arr = js_sys::Uint8Array::from(bytes);
-    let mut chunk = String::with_capacity(bytes.len());
-    for b in bytes {
-        chunk.push(*b as char);
+    const ALPHABET: &[u8; 64] =
+        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    let mut out = String::with_capacity((bytes.len() + 2) / 3 * 4);
+    let mut chunks = bytes.chunks_exact(3);
+    for c in &mut chunks {
+        let n = ((c[0] as u32) << 16) | ((c[1] as u32) << 8) | (c[2] as u32);
+        out.push(ALPHABET[((n >> 18) & 0x3f) as usize] as char);
+        out.push(ALPHABET[((n >> 12) & 0x3f) as usize] as char);
+        out.push(ALPHABET[((n >> 6) & 0x3f) as usize] as char);
+        out.push(ALPHABET[(n & 0x3f) as usize] as char);
     }
-    drop(arr);
-    let b64 = js_sys::eval(&format!("btoa({:?})", chunk))?;
-    b64.as_string()
-        .ok_or_else(|| JsValue::from_str("btoa returned non-string"))
+    let rem = chunks.remainder();
+    match rem.len() {
+        1 => {
+            let n = (rem[0] as u32) << 16;
+            out.push(ALPHABET[((n >> 18) & 0x3f) as usize] as char);
+            out.push(ALPHABET[((n >> 12) & 0x3f) as usize] as char);
+            out.push('=');
+            out.push('=');
+        }
+        2 => {
+            let n = ((rem[0] as u32) << 16) | ((rem[1] as u32) << 8);
+            out.push(ALPHABET[((n >> 18) & 0x3f) as usize] as char);
+            out.push(ALPHABET[((n >> 12) & 0x3f) as usize] as char);
+            out.push(ALPHABET[((n >> 6) & 0x3f) as usize] as char);
+            out.push('=');
+        }
+        _ => {}
+    }
+    Ok(out)
 }
 
 /// Write a single OTA file to `Data/public/<rel>`.
