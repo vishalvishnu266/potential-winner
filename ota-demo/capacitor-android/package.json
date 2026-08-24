@@ -5,7 +5,8 @@
   "scripts": {
     "build:leptos": "cd ../leptos-app && trunk build --release",
     "sync": "npm run build:leptos && npx cap sync android",
-    "android": "npm run sync && npx cap run android"
+    "android": "npm run sync && npx cap run android",
+    "ota": "npm run build:leptos"
   },
   "dependencies": {
     "@capacitor/android": "^6.1.0",

@@ -1,13 +1,14 @@
-//! Leptos CSR frontend for the OTA demo — written entirely in builder style
-//! (no `view!` macro). It exposes two buttons:
+//! Leptos CSR frontend for the OTA demo — builder syntax only, no `view!`.
 //!
-//!   * "Check for update" — fetches http://192.168.0.2:8080/version. If the
-//!     server version is newer than the locally stored one, it downloads the
-//!     new HTML bundle, writes it via the Capacitor Filesystem plugin to
-//!     `Data/public/index.html`, updates localStorage, then reloads.
-//!
-//!   * "Vibrate" — calls the Capacitor Haptics plugin to prove that native
-//!     JS APIs are reachable from Leptos/WASM.
+//! OTA flow (multi-file):
+//!   1. GET  http://192.168.0.2:8080/version   → {"version":"<hash>"}
+//!   2. If different from what we stored, GET /manifest
+//!      → {"version":"…","files":[{"path":"index.html","sha256":"…","size":…}, …]}
+//!   3. For every file: GET /files/<path>, then
+//!      Capacitor Filesystem.writeFile({ directory:'DATA', path:'public/<path>', … })
+//!      (binary files are base64-encoded; text files use utf8).
+//!   4. Store new version in localStorage and window.location.reload().
+//!   5. Next launch, MainActivity swaps the WebView root to the OTA dir.
 
 use leptos::html::{button, div, h1, p, pre};
 use leptos::*;
@@ -18,12 +19,9 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 
 const SERVER: &str = "http://192.168.0.2:8080";
 const LOCAL_VERSION_KEY: &str = "ota_version";
-const BUNDLED_VERSION: &str = "1"; // baked-in version at build time
+const BUNDLED_VERSION: &str = "bundled"; // baked-in placeholder
 
-// ---------- Capacitor JS bridge ----------
-//
-// We reach into `window.Capacitor.Plugins.*` through js-sys rather than
-// depending on a JS shim, so the WASM binary is fully self-contained.
+// ---------- Capacitor JS bridge helpers ----------
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no window")
@@ -51,7 +49,7 @@ async fn call_plugin(
     JsFuture::from(promise).await
 }
 
-// ---------- OTA logic ----------
+// ---------- HTTP helpers ----------
 
 async fn fetch_text(url: &str) -> Result<String, JsValue> {
     let opts = RequestInit::new();
@@ -66,6 +64,23 @@ async fn fetch_text(url: &str) -> Result<String, JsValue> {
     let text = JsFuture::from(resp.text()?).await?;
     Ok(text.as_string().unwrap_or_default())
 }
+
+async fn fetch_bytes(url: &str) -> Result<Vec<u8>, JsValue> {
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
+    let req = Request::new_with_str_and_init(url, &opts)?;
+    let resp_val = JsFuture::from(window().fetch_with_request(&req)).await?;
+    let resp: Response = resp_val.dyn_into()?;
+    if !resp.ok() {
+        return Err(JsValue::from_str(&format!("HTTP {}", resp.status())));
+    }
+    let buf = JsFuture::from(resp.array_buffer()?).await?;
+    let u8 = js_sys::Uint8Array::new(&buf);
+    Ok(u8.to_vec())
+}
+
+// ---------- version storage ----------
 
 fn local_version() -> String {
     window()
@@ -82,24 +97,73 @@ fn set_local_version(v: &str) {
     }
 }
 
-/// Write `contents` to `index.html` in the Capacitor Data directory using
-/// `Filesystem.writeFile`. Returns the resulting native URI on success.
-async fn write_index_html(contents: &str) -> Result<String, JsValue> {
-    let fs = capacitor_plugin("Filesystem")
-        .ok_or_else(|| JsValue::from_str("Capacitor Filesystem plugin not available"))?;
-    let opts = js_sys::Object::new();
-    js_sys::Reflect::set(&opts, &"path".into(), &"public/index.html".into())?;
-    js_sys::Reflect::set(&opts, &"data".into(), &contents.into())?;
-    js_sys::Reflect::set(&opts, &"directory".into(), &"DATA".into())?;
-    js_sys::Reflect::set(&opts, &"encoding".into(), &"utf8".into())?;
-    js_sys::Reflect::set(&opts, &"recursive".into(), &JsValue::TRUE)?;
-    let result = call_plugin(&fs, "writeFile", &opts).await?;
-    let uri = js_sys::Reflect::get(&result, &"uri".into())
-        .ok()
-        .and_then(|v| v.as_string())
-        .unwrap_or_default();
-    Ok(uri)
+// ---------- OTA write ----------
+
+fn is_text_path(p: &str) -> bool {
+    let p = p.to_ascii_lowercase();
+    p.ends_with(".html")
+        || p.ends_with(".htm")
+        || p.ends_with(".js")
+        || p.ends_with(".mjs")
+        || p.ends_with(".css")
+        || p.ends_with(".json")
+        || p.ends_with(".svg")
+        || p.ends_with(".txt")
+        || p.ends_with(".map")
 }
+
+fn base64_encode(bytes: &[u8]) -> Result<String, JsValue> {
+    // Use the browser's btoa via a Uint8Array roundtrip — no extra crate.
+    let arr = js_sys::Uint8Array::from(bytes);
+    let mut chunk = String::with_capacity(bytes.len());
+    // Build a "binary string" one char at a time; fine for small OTA payloads.
+    for b in bytes {
+        chunk.push(*b as char);
+    }
+    // Keep the array reachable so wasm-bindgen doesn't drop the buffer early.
+    drop(arr);
+    let b64 = js_sys::eval(&format!("btoa({:?})", chunk))?;
+    b64.as_string()
+        .ok_or_else(|| JsValue::from_str("btoa returned non-string"))
+}
+
+/// Write a single OTA file to `Data/public/<rel>`.
+async fn write_ota_file(
+    fs: &js_sys::Object,
+    rel: &str,
+    bytes: &[u8],
+) -> Result<(), JsValue> {
+    let opts = js_sys::Object::new();
+    js_sys::Reflect::set(&opts, &"path".into(), &format!("public/{rel}").into())?;
+    js_sys::Reflect::set(&opts, &"directory".into(), &"DATA".into())?;
+    js_sys::Reflect::set(&opts, &"recursive".into(), &JsValue::TRUE)?;
+
+    if is_text_path(rel) {
+        let s = std::str::from_utf8(bytes)
+            .map_err(|_| JsValue::from_str("non-utf8 in text file"))?;
+        js_sys::Reflect::set(&opts, &"data".into(), &s.into())?;
+        js_sys::Reflect::set(&opts, &"encoding".into(), &"utf8".into())?;
+    } else {
+        // Binary (wasm, png, …) — send base64 with no encoding flag.
+        let b64 = base64_encode(bytes)?;
+        js_sys::Reflect::set(&opts, &"data".into(), &b64.into())?;
+    }
+    call_plugin(fs, "writeFile", &opts).await?;
+    Ok(())
+}
+
+/// Wipe any previous OTA files so old hashed assets don't linger.
+async fn wipe_ota_dir(fs: &js_sys::Object) -> Result<(), JsValue> {
+    let opts = js_sys::Object::new();
+    js_sys::Reflect::set(&opts, &"path".into(), &"public".into())?;
+    js_sys::Reflect::set(&opts, &"directory".into(), &"DATA".into())?;
+    js_sys::Reflect::set(&opts, &"recursive".into(), &JsValue::TRUE)?;
+    // rmdir may error if the dir doesn't exist yet — swallow it.
+    let _ = call_plugin(fs, "rmdir", &opts).await;
+    Ok(())
+}
+
+// ---------- Vibrate ----------
 
 async fn vibrate() -> Result<(), JsValue> {
     if let Some(haptics) = capacitor_plugin("Haptics") {
@@ -108,7 +172,7 @@ async fn vibrate() -> Result<(), JsValue> {
         call_plugin(&haptics, "vibrate", &opts).await?;
         return Ok(());
     }
-    // Browser fallback so it also works in `trunk serve`.
+    // Browser fallback.
     let nav = window().navigator();
     let vibrate_fn = js_sys::Reflect::get(&nav, &"vibrate".into())?;
     if let Ok(f) = vibrate_fn.dyn_into::<js_sys::Function>() {
@@ -117,9 +181,7 @@ async fn vibrate() -> Result<(), JsValue> {
     Ok(())
 }
 
-// ---------- UI (builder-style Leptos) ----------
-
-// ---------- UI (builder-style Leptos) ----------
+// ---------- UI ----------
 
 fn app() -> impl IntoView {
     let (status, set_status) = create_signal(String::from("Idle."));
@@ -129,48 +191,106 @@ fn app() -> impl IntoView {
     let on_check = move |_| {
         set_status.set("Checking…".into());
         spawn_local(async move {
-            match fetch_text(&format!("{SERVER}/version")).await {
-                Err(e) => set_status.set(format!("Version check failed: {e:?}")),
-                Ok(body) => {
-                    // Parse {"version":"N"}
-                    let sv = serde_json::from_str::<serde_json::Value>(&body)
-                        .ok()
-                        .and_then(|v| v.get("version").and_then(|s| s.as_str()).map(String::from))
-                        .unwrap_or_else(|| body.trim().to_string());
-                    set_server_ver.set(sv.clone());
+            // 1. version
+            let sv = match fetch_text(&format!("{SERVER}/version")).await {
+                Err(e) => {
+                    set_status.set(format!("Version check failed: {e:?}"));
+                    return;
+                }
+                Ok(body) => serde_json::from_str::<serde_json::Value>(&body)
+                    .ok()
+                    .and_then(|v| v.get("version").and_then(|s| s.as_str()).map(String::from))
+                    .unwrap_or_else(|| body.trim().to_string()),
+            };
+            set_server_ver.set(sv.clone());
 
-                    let lv = local_version();
-                    if sv == lv {
-                        set_status.set(format!("Up to date (v{lv})."));
+            let lv = local_version();
+            if sv == lv {
+                set_status.set(format!("Up to date (v {}…)", &sv[..sv.len().min(8)]));
+                return;
+            }
+            set_status.set(format!(
+                "Update available: {}… → {}…\nFetching manifest…",
+                &lv[..lv.len().min(8)],
+                &sv[..sv.len().min(8)]
+            ));
+
+            // 2. manifest
+            let manifest_txt = match fetch_text(&format!("{SERVER}/manifest")).await {
+                Err(e) => {
+                    set_status.set(format!("Manifest failed: {e:?}"));
+                    return;
+                }
+                Ok(t) => t,
+            };
+            let manifest: serde_json::Value = match serde_json::from_str(&manifest_txt) {
+                Err(e) => {
+                    set_status.set(format!("Bad manifest JSON: {e}"));
+                    return;
+                }
+                Ok(v) => v,
+            };
+            let files = match manifest.get("files").and_then(|v| v.as_array()) {
+                Some(a) => a.clone(),
+                None => {
+                    set_status.set("Manifest missing 'files'".into());
+                    return;
+                }
+            };
+
+            // 3. Get Filesystem plugin (must be inside Capacitor for real OTA).
+            let fs = match capacitor_plugin("Filesystem") {
+                Some(fs) => fs,
+                None => {
+                    set_status.set(
+                        "Filesystem plugin unavailable — are you running inside Capacitor?"
+                            .into(),
+                    );
+                    return;
+                }
+            };
+
+            // 4. Wipe old OTA dir so stale hashed files don't accumulate.
+            let _ = wipe_ota_dir(&fs).await;
+
+            // 5. Download + write each file.
+            let total = files.len();
+            for (i, entry) in files.iter().enumerate() {
+                let path = entry.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                if path.is_empty() {
+                    continue;
+                }
+                set_status.set(format!("[{}/{}] {}", i + 1, total, path));
+
+                let bytes = match fetch_bytes(&format!("{SERVER}/files/{path}")).await {
+                    Err(e) => {
+                        set_status.set(format!("Download {path} failed: {e:?}"));
                         return;
                     }
-                    set_status.set(format!("Update available: v{lv} → v{sv}. Downloading…"));
+                    Ok(b) => b,
+                };
 
-                    let url = format!("{SERVER}/bundle/{sv}/index.html");
-                    match fetch_text(&url).await {
-                        Err(e) => set_status.set(format!("Download failed: {e:?}")),
-                        Ok(html) => match write_index_html(&html).await {
-                            Err(e) => set_status.set(format!(
-                                "Write failed: {e:?} \n(Are you running inside Capacitor?)"
-                            )),
-                            Ok(uri) => {
-                                set_local_version(&sv);
-                                set_status.set(format!(
-                                    "Wrote v{sv} to {uri}. Reloading in 1s…"
-                                ));
-                                let win = window();
-                                let cb = Closure::once_into_js(move || {
-                                    let _ = window().location().reload();
-                                });
-                                let _ = win.set_timeout_with_callback_and_timeout_and_arguments_0(
-                                    cb.as_ref().unchecked_ref(),
-                                    1000,
-                                );
-                            }
-                        },
-                    }
+                if let Err(e) = write_ota_file(&fs, path, &bytes).await {
+                    set_status.set(format!("Write {path} failed: {e:?}"));
+                    return;
                 }
             }
+
+            // 6. Persist version + reload.
+            set_local_version(&sv);
+            set_status.set(format!(
+                "Applied {} files (v {}…). Reloading in 1s…",
+                total,
+                &sv[..sv.len().min(8)]
+            ));
+            let win = window();
+            let cb = Closure::once_into_js(move || {
+                let _ = window().location().reload();
+            });
+            let _ = win.set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref(),
+                1000,
+            );
         });
     };
 
@@ -184,37 +304,48 @@ fn app() -> impl IntoView {
         });
     };
 
-    // ---- builder syntax: no styles attached anywhere ----
+    let short = |s: String| {
+        if s.len() > 10 { format!("{}…", &s[..10]) } else { s }
+    };
+
     div()
+        .style("font-family:system-ui;padding:24px;max-width:640px;margin:auto")
         .child(h1().child("Leptos + Axum OTA demo"))
         .child(
-            p().child("Bundled version: ")
-                .child(pre().child(BUNDLED_VERSION))
+            p().child("Bundled: ")
+                .child(pre().style("display:inline").child(BUNDLED_VERSION))
                 .child(" | Installed: ")
-                .child(pre().child(local_ver))
+                .child(pre().style("display:inline").child(short(local_ver)))
                 .child(" | Server: ")
-                .child(pre().child(move || server_ver.get())),
+                .child(pre().style("display:inline").child(move || short(server_ver.get()))),
         )
         .child(
             div()
+                .style("display:flex;gap:8px;margin:16px 0")
                 .child(
                     button()
+                        .style("padding:12px 16px;font-size:16px")
                         .on(ev::click, on_check)
                         .child("Check for update"),
                 )
                 .child(
                     button()
+                        .style("padding:12px 16px;font-size:16px")
                         .on(ev::click, on_vibrate)
                         .child("Vibrate (native)"),
                 ),
         )
         .child(
             pre()
+                .style(
+                    "background:#111;color:#0f0;padding:12px;border-radius:8px;\
+                     white-space:pre-wrap;word-break:break-all;min-height:120px",
+                )
                 .child(move || status.get()),
         )
 }
+
 fn main() {
-    // Surface Rust panics in the browser console during development.
     std::panic::set_hook(Box::new(|info| {
         web_sys::console::error_1(&JsValue::from_str(&format!("{info}")));
     }));
