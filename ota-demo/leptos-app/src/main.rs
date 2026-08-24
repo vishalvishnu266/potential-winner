@@ -113,14 +113,11 @@ fn is_text_path(p: &str) -> bool {
 }
 
 fn base64_encode(bytes: &[u8]) -> Result<String, JsValue> {
-    // Use the browser's btoa via a Uint8Array roundtrip — no extra crate.
     let arr = js_sys::Uint8Array::from(bytes);
     let mut chunk = String::with_capacity(bytes.len());
-    // Build a "binary string" one char at a time; fine for small OTA payloads.
     for b in bytes {
         chunk.push(*b as char);
     }
-    // Keep the array reachable so wasm-bindgen doesn't drop the buffer early.
     drop(arr);
     let b64 = js_sys::eval(&format!("btoa({:?})", chunk))?;
     b64.as_string()
@@ -144,7 +141,6 @@ async fn write_ota_file(
         js_sys::Reflect::set(&opts, &"data".into(), &s.into())?;
         js_sys::Reflect::set(&opts, &"encoding".into(), &"utf8".into())?;
     } else {
-        // Binary (wasm, png, …) — send base64 with no encoding flag.
         let b64 = base64_encode(bytes)?;
         js_sys::Reflect::set(&opts, &"data".into(), &b64.into())?;
     }
@@ -158,7 +154,6 @@ async fn wipe_ota_dir(fs: &js_sys::Object) -> Result<(), JsValue> {
     js_sys::Reflect::set(&opts, &"path".into(), &"public".into())?;
     js_sys::Reflect::set(&opts, &"directory".into(), &"DATA".into())?;
     js_sys::Reflect::set(&opts, &"recursive".into(), &JsValue::TRUE)?;
-    // rmdir may error if the dir doesn't exist yet — swallow it.
     let _ = call_plugin(fs, "rmdir", &opts).await;
     Ok(())
 }
@@ -172,7 +167,6 @@ async fn vibrate() -> Result<(), JsValue> {
         call_plugin(&haptics, "vibrate", &opts).await?;
         return Ok(());
     }
-    // Browser fallback.
     let nav = window().navigator();
     let vibrate_fn = js_sys::Reflect::get(&nav, &"vibrate".into())?;
     if let Ok(f) = vibrate_fn.dyn_into::<js_sys::Function>() {
@@ -191,7 +185,6 @@ fn app() -> impl IntoView {
     let on_check = move |_| {
         set_status.set("Checking…".into());
         spawn_local(async move {
-            // 1. version
             let sv = match fetch_text(&format!("{SERVER}/version")).await {
                 Err(e) => {
                     set_status.set(format!("Version check failed: {e:?}"));
@@ -215,7 +208,6 @@ fn app() -> impl IntoView {
                 &sv[..sv.len().min(8)]
             ));
 
-            // 2. manifest
             let manifest_txt = match fetch_text(&format!("{SERVER}/manifest")).await {
                 Err(e) => {
                     set_status.set(format!("Manifest failed: {e:?}"));
@@ -238,7 +230,6 @@ fn app() -> impl IntoView {
                 }
             };
 
-            // 3. Get Filesystem plugin (must be inside Capacitor for real OTA).
             let fs = match capacitor_plugin("Filesystem") {
                 Some(fs) => fs,
                 None => {
@@ -250,10 +241,8 @@ fn app() -> impl IntoView {
                 }
             };
 
-            // 4. Wipe old OTA dir so stale hashed files don't accumulate.
             let _ = wipe_ota_dir(&fs).await;
 
-            // 5. Download + write each file.
             let total = files.len();
             for (i, entry) in files.iter().enumerate() {
                 let path = entry.get("path").and_then(|v| v.as_str()).unwrap_or("");
@@ -276,7 +265,6 @@ fn app() -> impl IntoView {
                 }
             }
 
-            // 6. Persist version + reload.
             set_local_version(&sv);
             set_status.set(format!(
                 "Applied {} files (v {}…). Reloading in 1s…",
@@ -309,35 +297,36 @@ fn app() -> impl IntoView {
     };
 
     div()
-        .style("font-family:system-ui;padding:24px;max-width:640px;margin:auto")
+        .attr("style", "font-family:system-ui;padding:24px;max-width:640px;margin:auto")
         .child(h1().child("Leptos + Axum OTA demo"))
         .child(
             p().child("Bundled: ")
-                .child(pre().style("display:inline").child(BUNDLED_VERSION))
+                .child(pre().attr("style", "display:inline").child(BUNDLED_VERSION))
                 .child(" | Installed: ")
-                .child(pre().style("display:inline").child(short(local_ver)))
+                .child(pre().attr("style", "display:inline").child(short(local_ver)))
                 .child(" | Server: ")
-                .child(pre().style("display:inline").child(move || short(server_ver.get()))),
+                .child(pre().attr("style", "display:inline").child(move || short(server_ver.get()))),
         )
         .child(
             div()
-                .style("display:flex;gap:8px;margin:16px 0")
+                .attr("style", "display:flex;gap:8px;margin:16px 0")
                 .child(
                     button()
-                        .style("padding:12px 16px;font-size:16px")
+                        .attr("style", "padding:12px 16px;font-size:16px")
                         .on(ev::click, on_check)
                         .child("Check for update"),
                 )
                 .child(
                     button()
-                        .style("padding:12px 16px;font-size:16px")
+                        .attr("style", "padding:12px 16px;font-size:16px")
                         .on(ev::click, on_vibrate)
                         .child("Vibrate (native)"),
                 ),
         )
         .child(
             pre()
-                .style(
+                .attr(
+                    "style",
                     "background:#111;color:#0f0;padding:12px;border-radius:8px;\
                      white-space:pre-wrap;word-break:break-all;min-height:120px",
                 )
