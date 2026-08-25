@@ -128,7 +128,17 @@ async fn main() {
         bundles_dir: Arc::new(bundles_dir.clone()),
     };
 
-    let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any);
+    // Permissive CORS so the Leptos WebView (whose origin is
+    // `http://localhost` on Android, `capacitor://localhost` on iOS, or
+    // whatever `trunk serve` picks when developing on desktop) can reach
+    // the API. Crucially we must also allow *headers* — without
+    // `allow_headers(Any)` the browser's `OPTIONS` preflight for
+    // `Content-Type: application/json` fails, and reqwest reports
+    // "error sending request".
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let app = Router::new()
         .route(routes::LATEST, get(latest))
