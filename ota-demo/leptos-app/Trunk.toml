@@ -3,3 +3,11 @@ target = "index.html"
 dist = "dist"
 public_url = "./"     # relative paths — required when loaded from file:// or Capacitor
 release = true
+
+# Regenerate dist/stylance.css from all *.module.css files under src/ before
+# every build. Requires `cargo install stylance-cli` (documented in README).
+# Runs for both `trunk build` and `trunk serve`.
+[[hooks]]
+stage = "pre_build"
+command = "stylance"
+command_arguments = ["."]

@@ -1,0 +1,14 @@
+# Config for `stylance-cli`. Runs as a Trunk pre-build hook (see
+# Trunk.toml) so `dist/stylance.css` is regenerated before every build.
+#
+# Every `*.module.css` under `folders` is:
+#   - class-scoped by content hash (typo-safe, no collisions)
+#   - re-exported as a Rust ident via `stylance::import_crate_style!()`
+#
+# CSS classes look like `.button { ... }` in the source and become
+# something like `.button-h29fka { ... }` in the emitted CSS. The Rust
+# side gets `styles::action_button::button` -> "button-h29fka".
+
+output_file = "./dist/stylance.css"
+folders = ["./src/"]
+extensions = [".module.scss", ".module.css"]

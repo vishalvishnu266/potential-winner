@@ -17,6 +17,7 @@ on the phone → the running app swaps to the new WASM+JS+HTML bundle.
 # 1. Rust WASM toolchain
 rustup target add wasm32-unknown-unknown
 cargo install trunk
+cargo install stylance-cli   # typesafe CSS modules → dist/stylance.css
 
 # 2. Capacitor deps (installs @capawesome/capacitor-live-update)
 cd capacitor-android && npm install && cd ..
@@ -91,7 +92,17 @@ ota-demo/
 │   ├── src/main.rs                   ← serves /latest and /bundles/*.zip
 │   └── bundles/                      ← <hash>.zip + latest.json (generated)
 ├── leptos-app/                       ← trunk build --release
-│   └── src/main.rs                   ← builder-style Leptos + LiveUpdate client
+│   ├── Trunk.toml                    ← runs stylance-cli as pre-build hook
+│   ├── stylance.toml                 ← CSS-modules output config
+│   ├── assets/global.css             ← resets + design tokens (non-scoped)
+│   └── src/
+│       ├── main.rs                   ← panic hook + mount_to_body(App)
+│       ├── app.rs                    ← top-level <App/> layout
+│       ├── config.rs                 ← SERVER, BUNDLED_VERSION, short()
+│       ├── components/               ← <StatusPill/>, <ActionButton/>, <LogPane/>
+│       ├── styles/*.module.css       ← per-component typesafe CSS modules
+│       ├── platform/                 ← window, capacitor, fetch, haptics
+│       └── ota/                      ← run_update + LiveUpdate wrappers
 └── capacitor-android/
     ├── capacitor.config.ts           ← webDir=../leptos-app/dist
     ├── scripts/make-bundle.mjs       ← trunk-build, zip, write latest.json
@@ -102,11 +113,29 @@ ota-demo/
                                        ← plain `extends BridgeActivity {}`
 ```
 
+## Styling (typesafe CSS Modules via `stylance`)
+
+* Component styles live next to the component in
+  `src/styles/<name>.module.css`. Class selectors are referenced from
+  Rust as `crate::styles::<name>::<name>::class_name` — typos are compile
+  errors.
+* `stylance-cli` runs as a Trunk **pre-build hook** (see `Trunk.toml`),
+  merging every `*.module.css` into `dist/stylance.css` with hash-scoped
+  class names, so both `trunk serve` and `trunk build` Just Work.
+* Global resets / design tokens live in `assets/global.css` and are
+  loaded via a plain `<link data-trunk rel="css">` — no scoping.
+* Keep CSS class names **snake_case** so they map cleanly to Rust
+  idents; stylance renames non-snake-case classes.
+
 ## Gotchas
 
 * **Trunk's `public_url` is `./`** so all asset paths in `index.html` are
   relative — required because Capawesome's plugin serves the bundle from a
   local file path after activation.
+* **`stylance-cli` must be on your PATH.** If `trunk build` fails with
+  `command not found: stylance`, run `cargo install stylance-cli` and
+  retry. Both `trunk build` and `trunk serve` invoke it via the pre-build
+  hook.
 * **You never need to re-install the APK** just to update Leptos code. You
   only re-install when you touch Java/Kotlin, native plugins, or
   permissions (installing the Capawesome plugin itself counts as a native

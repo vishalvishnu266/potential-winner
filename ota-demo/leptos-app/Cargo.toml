@@ -11,6 +11,11 @@ js-sys = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde-wasm-bindgen = "0.6"
+# Typesafe CSS Modules — reads src/**/*.module.css at compile time and
+# exposes class names as Rust idents (typo = compile error). The
+# accompanying `stylance-cli` binary emits the merged, hash-scoped CSS to
+# dist/stylance.css (see Trunk.toml pre-build hook).
+stylance = "0.5"
 
 [dependencies.web-sys]
 version = "0.3"
