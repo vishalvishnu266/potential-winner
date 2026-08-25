@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = [
+    "common",
+    "axum-server",
+    "leptos-app",
+]
+
+# Keep serde version-locked across the workspace so `common` types serialize
+# identically on both sides.
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

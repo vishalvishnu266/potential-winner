@@ -6,12 +6,14 @@
 //! directory next to this crate; we just serve them as static files.
 //!
 //! Endpoints:
-//!   GET /latest              -> contents of bundles/latest.json
-//!                                { "version": "<hash>",
-//!                                  "url": "http://…/bundles/<hash>.zip",
-//!                                  "artifactType": "zip" }
-//!   GET /version             -> { "version": "<hash>" } (thin passthrough)
-//!   GET /bundles/<name>.zip  -> raw bundle bytes (served via ServeDir)
+//!   GET  /latest              -> contents of bundles/latest.json
+//!                                 { "version": "<hash>",
+//!                                   "url": "http://…/bundles/<hash>.zip",
+//!                                   "artifactType": "zip" }
+//!   GET  /version             -> { "version": "<hash>" } (thin passthrough)
+//!   GET  /bundles/<name>.zip  -> raw bundle bytes (served via ServeDir)
+//!   POST /hello               -> body { "name": "..." }
+//!                                 -> { "message": "Hello, ...!" }  (demo)
 //!
 //! Override the bundles directory with `--bundles <path>` or the
 //! `OTA_BUNDLES` env var. Default is `../axum-server/bundles` (relative to
@@ -23,25 +25,15 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Json},
-    routing::get,
+    routing::{get, post},
     Router,
 };
-use serde::{Deserialize, Serialize};
+use ota_common::{routes, HelloReq, HelloResp, Latest, VersionResp};
 use tower_http::{cors::{Any, CorsLayer}, services::ServeDir};
 
-// ---------- latest.json shape ----------
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct Latest {
-    version: String,
-    url: String,
-    #[serde(rename = "artifactType", default = "default_artifact_type")]
-    artifact_type: String,
-}
-
-fn default_artifact_type() -> String {
-    "zip".to_string()
-}
+// The wire shape of `latest.json` (and the /latest response body) lives in
+// the shared `ota-common` crate, so the Leptos client deserializes it
+// against the exact same type.
 
 // ---------- app state ----------
 
@@ -63,11 +55,6 @@ async fn read_latest(state: &AppState) -> Result<Latest, String> {
 
 // ---------- handlers ----------
 
-#[derive(Serialize)]
-struct VersionResp {
-    version: String,
-}
-
 async fn latest(State(state): State<AppState>) -> impl IntoResponse {
     match read_latest(&state).await {
         Ok(l) => Json(l).into_response(),
@@ -80,6 +67,20 @@ async fn version(State(state): State<AppState>) -> impl IntoResponse {
         Ok(l) => Json(VersionResp { version: l.version }).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
+}
+
+/// `POST /hello` — trivial demo of a typed round-trip POST. Body in and
+/// body out are both defined in `ota-common`, so the Leptos client sends
+/// / parses the exact same shapes with zero duplication.
+async fn hello(Json(req): Json<HelloReq>) -> Json<HelloResp> {
+    let who = if req.name.trim().is_empty() {
+        "world".to_string()
+    } else {
+        req.name
+    };
+    Json(HelloResp {
+        message: format!("Hello, {who}!"),
+    })
 }
 
 // ---------- entrypoint ----------
@@ -130,9 +131,10 @@ async fn main() {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any);
 
     let app = Router::new()
-        .route("/latest", get(latest))
-        .route("/version", get(version))
-        .nest_service("/bundles", ServeDir::new(bundles_dir))
+        .route(routes::LATEST, get(latest))
+        .route(routes::VERSION, get(version))
+        .route(routes::HELLO, post(hello))
+        .nest_service(routes::BUNDLES_PREFIX, ServeDir::new(bundles_dir))
         .with_state(state)
         .layer(cors);
 

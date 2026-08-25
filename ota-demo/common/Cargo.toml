@@ -1,0 +1,10 @@
+[package]
+name = "ota-common"
+version = "0.1.0"
+edition = "2021"
+
+# Shared, transport-agnostic types + route constants used by both the Axum
+# server and the Leptos client. Keep this crate lean: only depend on things
+# that compile cleanly for `wasm32-unknown-unknown`.
+[dependencies]
+serde = { workspace = true }
