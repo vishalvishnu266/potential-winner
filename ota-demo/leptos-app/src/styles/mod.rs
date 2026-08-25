@@ -5,8 +5,9 @@
 //! selector. Referencing a non-existent class becomes a compile error.
 //!
 //! The emitted CSS (with hash-scoped class names) is written to
-//! `dist/stylance.css` by the `stylance` binary that runs as a Trunk
-//! pre-build hook (see `Trunk.toml`).
+//! `assets/generated/stylance.css` by the `stylance` binary that runs as
+//! a Trunk pre-build hook (see `Trunk.toml`). It's outside `dist/`
+//! because Trunk wipes `dist/` at the start of every build.
 //!
 //! Convention: keep class names snake_case in the .module.css files so
 //! they map cleanly to Rust idents.

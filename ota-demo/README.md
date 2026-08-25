@@ -120,8 +120,11 @@ ota-demo/
   Rust as `crate::styles::<name>::<name>::class_name` — typos are compile
   errors.
 * `stylance-cli` runs as a Trunk **pre-build hook** (see `Trunk.toml`),
-  merging every `*.module.css` into `dist/stylance.css` with hash-scoped
-  class names, so both `trunk serve` and `trunk build` Just Work.
+  merging every `*.module.css` into `assets/generated/stylance.css` with
+  hash-scoped class names. `index.html` links to that file via
+  `<link data-trunk rel="css">`, and Trunk copies it into `dist/` as
+  part of the normal build (kept outside `dist/` because Trunk wipes
+  `dist/` at the start of every build).
 * Global resets / design tokens live in `assets/global.css` and are
   loaded via a plain `<link data-trunk rel="css">` — no scoping.
 * Keep CSS class names **snake_case** so they map cleanly to Rust

@@ -9,6 +9,11 @@
 # something like `.button-h29fka { ... }` in the emitted CSS. The Rust
 # side gets `styles::action_button::button` -> "button-h29fka".
 
-output_file = "./dist/stylance.css"
+# NOTE: do NOT write into ./dist/ — Trunk wipes that directory at the
+# start of every build (after pre-build hooks run), so any file placed
+# there before the build starts is deleted before Trunk can pick it up.
+# Emit into a source-tree location instead; index.html links to it via
+# `<link data-trunk rel="css">` and Trunk then copies it into dist/.
+output_file = "./assets/generated/stylance.css"
 folders = ["./src/"]
 extensions = [".module.scss", ".module.css"]
