@@ -27,7 +27,7 @@ const REPO_ROOT = resolve(HERE, "..", "..");
 const LEPTOS_DIR = join(REPO_ROOT, "leptos-app");
 const DIST_DIR = join(LEPTOS_DIR, "dist");
 const BUNDLES_DIR = join(REPO_ROOT, "axum-server", "bundles");
-const BASE_URL = process.env.OTA_BASE_URL ?? "http://192.168.0.2:8080";
+const BASE_URL = process.env.OTA_BASE_URL ?? "http://192.168.0.5:8080";
 
 function log(msg) {
   process.stdout.write(`[bundle] ${msg}\n`);

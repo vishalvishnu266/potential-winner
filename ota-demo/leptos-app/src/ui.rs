@@ -35,7 +35,7 @@ use crate::live_update::{
 
 /// Base URL of the OTA server. Adjust for your LAN or point at localhost
 /// when testing in a browser.
-const SERVER: &str = "http://192.168.0.2:8080";
+const SERVER: &str = "http://192.168.0.5:8080";
 
 /// Placeholder shown in the "Installed" pill before the first OTA is
 /// applied (i.e. while the WebView is still serving APK-bundled assets).
@@ -281,7 +281,7 @@ fn home_page() -> impl IntoView {
                 )
                 .child(
                     p().attr("class", "mt-1 text-sm text-slate-600").child(
-                        "This is your Home page. Add your app content here.",
+                        "This is your Home page!!!. Add your app content here.",
                     ),
                 ),
         )
@@ -381,7 +381,7 @@ where
                                 .attr(
                                     "class",
                                     "w-full py-3 rounded-xl bg-indigo-600 text-white \
-                                     font-medium text-sm active:bg-indigo-700 \
+                                     font-medium text-sm active:bg-red-700 \
                                      shadow-sm transition",
                                 )
                                 .on(ev::click, on_check)
