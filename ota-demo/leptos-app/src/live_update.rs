@@ -51,3 +51,25 @@ pub async fn reload_app(live: &js_sys::Object) -> Result<(), JsValue> {
     let _ = call_plugin(live, "reload", &js_sys::Object::new()).await?;
     Ok(())
 }
+
+/// Tell the LiveUpdate plugin the newly-activated bundle finished booting
+/// successfully. If this is *not* called within the plugin's ready-timeout
+/// window after a `setNextBundle` + `reload`, the plugin assumes the new
+/// bundle is broken and **automatically rolls back** to the previous one
+/// on the next launch. This is the single most common cause of "my update
+/// keeps getting rolled back" reports.
+///
+/// Call this once, as early as possible, after the Leptos app has mounted
+/// and rendered its first frame — see `ui::app`.
+pub async fn ready(live: &js_sys::Object) -> Result<(), JsValue> {
+    let _ = call_plugin(live, "ready", &js_sys::Object::new()).await?;
+    Ok(())
+}
+
+/// Explicitly roll back to the previously-active bundle. Exposed so the
+/// Settings page can offer a manual "revert" affordance; the plugin will
+/// also do this automatically when [`ready`] is not called in time.
+pub async fn rollback(live: &js_sys::Object) -> Result<(), JsValue> {
+    let _ = call_plugin(live, "rollback", &js_sys::Object::new()).await?;
+    Ok(())
+}

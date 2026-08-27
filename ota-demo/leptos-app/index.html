@@ -2,9 +2,25 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OTA Demo v1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>OTA Demo</title>
+    <!-- Tailwind via CDN. Fine for a demo / OTA-shipped bundle; swap for a
+         precompiled build if you need to ship without network at first paint. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html, body { height: 100%; margin: 0; background: #f8fafc; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+      }
+      /* Respect the phone's notch / gesture bar. */
+      .safe-top    { padding-top:    env(safe-area-inset-top); }
+      .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
     <link data-trunk rel="rust" data-wasm-opt="z" />
   </head>
-  <body></body>
+  <body class="bg-slate-50"></body>
 </html>
