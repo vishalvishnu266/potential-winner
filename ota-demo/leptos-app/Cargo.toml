@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 leptos = { version = "0.6", features = ["csr"] }
+# Client-side router — gives us real URLs (`/`, `/settings`) and
+# `<A>` links / `use_location` for active-tab styling.
+leptos_router = { version = "0.6", features = ["csr"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
