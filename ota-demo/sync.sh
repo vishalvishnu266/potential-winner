@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
 # One-shot "publish new OTA" for macOS/Linux.
 #
-#   ./sync.sh
+#   ./sync.sh   # trunk-build + zip + write latest.json
 #
-# Delegates to the Node build script in capacitor-android/, which:
-#   1. Runs `trunk build --release` in leptos-app/.
-#   2. Hashes dist/ and zips it into axum-server/bundles/<hash>.zip.
-#   3. Writes axum-server/bundles/latest.json.
-#
-# The Axum server serves those files as-is, so as soon as this finishes you
-# can tap "Check for update" on the phone.
+# The current OTA URL is baked into util.rs at build time; change it
+# with `./set-ota-url.sh <url>` first if needed.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
@@ -18,4 +13,4 @@ echo "==> npm run bundle  (capacitor-android)"
 
 echo
 echo "OK. New bundle is in axum-server/bundles/."
-echo "Now tap 'Check for update' in the app."
+echo "Tap 'Check for update' in the app (or wait ~15s for the poller)."

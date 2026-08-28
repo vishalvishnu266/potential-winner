@@ -26,26 +26,10 @@ cd capacitor-android && npm install && cd ..
 ```
 
 Make sure your dev machine is reachable at **192.168.0.2** on the same
-Wi-Fi as your phone. To point at a different host:
-
-* **Client (Leptos):** set `OTA_SERVER_URL` at build time. It's read via
-  `option_env!` in `leptos-app/src/util.rs` and baked into the WASM bundle:
-
-  ```bash
-  # dev on a different LAN IP
-  OTA_SERVER_URL=http://192.168.1.42:8080 trunk build --release
-
-  # staging / prod
-  OTA_SERVER_URL=https://ota.example.com trunk build --release
-  ```
-
-  If unset, it falls back to `http://192.168.0.2:8080` so a plain
-  `trunk serve` still works out of the box. Trailing slashes are trimmed.
-* **Sync script:** set `OTA_BASE_URL` for the same host so `latest.json`
-  points at the right download URL.
-* **Android cleartext allowlist:** edit the domain in
-  `capacitor-android/android/app/src/main/res/xml/network_security_config.xml`
-  (only needed for plain-HTTP hosts — HTTPS works without an allowlist).
+Wi-Fi as your phone (assign that as a static IP on your laptop, or edit
+`SERVER` in `leptos-app/src/util.rs` — the helper script
+`./set-ota-url.sh <url>` rewrites it plus the matching entries in
+`make-bundle.mjs` and `capacitor.config.ts` in one shot).
 
 ## Terminal 1 — start the OTA server (leave running)
 
