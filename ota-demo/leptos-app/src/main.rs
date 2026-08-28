@@ -1,35 +1,48 @@
-//! Leptos CSR frontend for the OTA demo — builder syntax only, no `view!`.
+//! Leptos CSR frontend for the OTA demo.
 //!
-//! OTA flow (Capawesome Live Update):
-//!   1. GET  http://192.168.0.2:8080/latest
-//!      -> { "version": "<hash>", "url": "…/bundles/<hash>.zip", "artifactType": "zip" }
-//!   2. Ask LiveUpdate for the currently-active bundle id.
-//!   3. If the server version differs:
-//!         LiveUpdate.downloadBundle({ bundleId, url })   ← fetches zip, unpacks
-//!         LiveUpdate.setNextBundle({ bundleId })         ← activate on reload
-//!         LiveUpdate.reload()                            ← restart WebView now
-//!   4. The plugin points the WebView at the new bundle after reload.
-//!   5. After the new bundle boots, `ui::app` calls `LiveUpdate.ready()`
-//!      to confirm the boot and disarm the plugin's automatic rollback.
+//! ## Module layout
 //!
-//! Module layout:
-//!   * `capacitor`    — window() + generic plugin invocation
-//!   * `http`         — GET (fetch_text) + typed POST (post_json)
-//!   * `live_update`  — typed wrappers for the Capawesome LiveUpdate plugin
-//!   * `haptics`      — vibrate() (unrelated to OTA, kept for demo)
-//!   * `ota`          — pure OTA state machine (`check_and_apply`, `do_rollback`)
-//!   * `util`         — shared constants + small helpers (`short`, SERVER)
-//!   * `components/`  — reusable UI pieces (header, bottom nav, pills)
-//!   * `pages/`       — routed views (home, settings) + route path constants
-//!   * `ui`           — top-level Router + shell that stitches it all together
+//! ```text
+//! src/
+//! ├── main.rs           — panic hook + `mount_to_body(app::app)`
+//! ├── app.rs            — top-level component: state, poller, Router
+//! ├── state.rs          — `AppState` (context-provided reactive signals)
+//! ├── util.rs           — SERVER, BUNDLED_VERSION, short()
+//! ├── platform/         — JS / Capacitor plumbing (Leptos-free)
+//! │   ├── capacitor.rs
+//! │   ├── http.rs
+//! │   ├── haptics.rs
+//! │   └── live_update.rs
+//! ├── ota/              — OTA subsystem (Leptos-free)
+//! │   ├── engine.rs     — check → download → activate → reload
+//! │   ├── events.rs     — OtaEvent + status line
+//! │   └── poller.rs     — 15s background check
+//! ├── router/           — centralized routing
+//! │   ├── mod.rs        — path constants + <Routes>
+//! │   └── shell.rs      — header + body + bottom nav layout
+//! ├── ui/               — reusable UI building blocks
+//! │   ├── header.rs
+//! │   ├── bottom_nav.rs — Home / Vibrate / Settings
+//! │   └── version_pill.rs
+//! └── pages/            — routed views (read AppState from context)
+//!     ├── home.rs
+//!     └── settings.rs
+//! ```
+//!
+//! ## OTA flow (Capawesome Live Update)
+//!
+//! 1. `GET /latest` → `{ version, url, artifactType }`.
+//! 2. Compare against `LiveUpdate.getBundle()`.
+//! 3. If different: `downloadBundle` → `setNextBundle` → `reload`.
+//! 4. New bundle boots → `app::app` calls `LiveUpdate.ready()` to
+//!    disarm the plugin's automatic rollback safety net.
 
-mod capacitor;
-mod components;
-mod haptics;
-mod http;
-mod live_update;
+mod app;
 mod ota;
 mod pages;
+mod platform;
+mod router;
+mod state;
 mod ui;
 mod util;
 
@@ -40,5 +53,5 @@ fn main() {
     std::panic::set_hook(Box::new(|info| {
         web_sys::console::error_1(&JsValue::from_str(&format!("{info}")));
     }));
-    mount_to_body(ui::app);
+    mount_to_body(app::app);
 }

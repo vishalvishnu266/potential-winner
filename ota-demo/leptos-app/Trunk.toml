@@ -3,3 +3,23 @@ target = "index.html"
 dist = "dist"
 public_url = "./"     # relative paths — required when loaded from file:// or Capacitor
 release = true
+
+# ---------------------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------------------
+# The OTA server base URL is resolved at compile time from `OTA_SERVER_URL`
+# (see `src/util.rs`). Trunk forwards process env vars to `cargo build`, so
+# you can either export it in your shell:
+#
+#   OTA_SERVER_URL=https://ota.example.com trunk build --release
+#
+# ...or uncomment the block below to hard-code a default for this checkout.
+# Anything set on the command line still wins.
+#
+# [tools]
+# # (nothing here yet)
+#
+# [[hooks]]
+# stage = "pre_build"
+# command = "sh"
+# command_arguments = ["-c", "echo Building against OTA_SERVER_URL=${OTA_SERVER_URL:-<default>}"]

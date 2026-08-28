@@ -9,9 +9,8 @@
 
 use wasm_bindgen::prelude::*;
 
-/// Map any `reqwest::Error` (or other display-able error) into the
-/// `JsValue` return type the rest of the wasm code already uses, so
-/// callers don't need to care where the error came from.
+/// Map any display-able error into the `JsValue` return type the rest
+/// of the wasm code already uses.
 fn js_err<E: std::fmt::Display>(prefix: &str) -> impl Fn(E) -> JsValue + '_ {
     move |e| JsValue::from_str(&format!("{prefix}: {e}"))
 }
@@ -26,10 +25,8 @@ pub async fn fetch_text(url: &str) -> Result<String, JsValue> {
     resp.text().await.map_err(js_err("read body"))
 }
 
-/// Typed JSON POST helper. Serializes `body` with serde, POSTs it, and
-/// deserializes the response back into `Resp`. Any transport, HTTP, or
-/// serde error bubbles up as a `JsValue` so it plays nicely with the
-/// rest of the wasm interop code.
+/// Typed JSON POST helper. Serializes `body`, POSTs it, and deserializes
+/// the response back into `Resp`.
 pub async fn post_json<Req, Resp>(url: &str, body: &Req) -> Result<Resp, JsValue>
 where
     Req: serde::Serialize,
@@ -37,7 +34,7 @@ where
 {
     let resp = reqwest::Client::new()
         .post(url)
-        .json(body) // sets Content-Type: application/json + serializes
+        .json(body)
         .send()
         .await
         .map_err(js_err("post"))?;

@@ -6,14 +6,13 @@ use leptos::html::{div, h1, span};
 use leptos::*;
 use leptos_router::use_location;
 
-use crate::pages::route;
+use crate::router::path;
 
-/// Render the top header. The title is derived reactively from the
-/// current URL so it updates as the user navigates between tabs.
+/// Render the top header. Title reactively derived from the current URL.
 pub fn header_bar() -> impl IntoView {
     let location = use_location();
     let title = move || match location.pathname.get().as_str() {
-        route::SETTINGS => "Settings",
+        path::SETTINGS => "Settings",
         // Fall back to Home for `/` and any unknown path.
         _ => "Home",
     };

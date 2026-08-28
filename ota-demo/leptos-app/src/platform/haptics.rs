@@ -1,11 +1,11 @@
-//! Vibration helper — unrelated to OTA, kept as a "does native stuff work?"
-//! smoke test. Prefers Capacitor's `Haptics` plugin, falls back to the
-//! plain-browser `navigator.vibrate` API when running outside Capacitor.
+//! Vibration helper. Prefers Capacitor's `Haptics` plugin, falls back
+//! to the plain-browser `navigator.vibrate` API when running outside
+//! Capacitor.
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::capacitor::{call_plugin, capacitor_plugin, window};
+use crate::platform::capacitor::{call_plugin, capacitor_plugin, window};
 
 const DURATION_MS: f64 = 300.0;
 

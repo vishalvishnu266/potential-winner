@@ -1,109 +1,65 @@
-//! Settings page — view only.
+//! Settings page.
 //!
-//! The OTA state machine lives in `crate::ota`; this file just wires
-//! button clicks to `ota::check_and_apply` / `ota::do_rollback` and
-//! translates the streamed events into reactive signal updates.
+//! Reads shared state from context (`AppState::expect()`) so no props
+//! are drilled in from the router/shell. The "Check for update" button
+//! kicks off the same [`check_and_apply`] flow that the background
+//! poller runs — it's just a manual trigger for users who don't want to
+//! wait for the next 15 s tick.
+//!
+//! **Removed** in this pass: the manual rollback button (the plugin's
+//! automatic safety net + `ready()` on boot is sufficient) and the
+//! standalone Vibrate button (moved to the bottom nav bar).
 
-use leptos::html::{button, div, h2, p, span};
+use leptos::html::{button, div, p, span};
 use leptos::*;
 use ota_common::{routes, HelloReq, HelloResp};
 use wasm_bindgen_futures::spawn_local;
 
-use crate::components::version_pill::version_pill;
-use crate::haptics::vibrate;
-use crate::http::post_json;
-use crate::ota::{
-    bundled_placeholder, check_and_apply, do_rollback, event_status_line, OtaEvent,
-};
+use crate::ota::events::{event_status_line, OtaEvent};
+use crate::ota::{check_and_apply};
+use crate::platform::http::post_json;
+use crate::state::AppState;
+use crate::ui::version_pill::version_pill;
 use crate::util::{short, BUNDLED_VERSION, SERVER};
 
 /// Render the Settings page contents.
-pub fn settings_page(
-    installed_ver: ReadSignal<String>,
-    set_installed_ver: WriteSignal<String>,
-    server_ver: ReadSignal<String>,
-    set_server_ver: WriteSignal<String>,
-    status: ReadSignal<String>,
-    set_status: WriteSignal<String>,
-) -> impl IntoView {
-    // ---- OTA button handlers ---------------------------------------
+pub fn settings_page() -> impl IntoView {
+    let state = AppState::expect();
 
+    // Manual "check now" — same OTA flow the poller uses, just triggered
+    // by the user tapping the button instead of the 15s timer.
     let on_check = move |_| {
         spawn_local(async move {
-            let _ = check_and_apply(|ev| apply_ota_event(
-                &ev,
-                set_status,
-                set_server_ver,
-                set_installed_ver,
-            ))
-            .await;
+            let _ = check_and_apply(|ev| apply_ota_event(&ev, state)).await;
         });
     };
 
-    let on_rollback = move |_| {
-        spawn_local(async move {
-            let _ = do_rollback(|ev| apply_ota_event(
-                &ev,
-                set_status,
-                set_server_ver,
-                set_installed_ver,
-            ))
-            .await;
-        });
-    };
-
-    // ---- Diagnostics handlers --------------------------------------
-
-    let on_vibrate = move |_| {
-        spawn_local(async move {
-            if let Err(e) = vibrate().await {
-                set_status.set(format!("Vibrate failed: {e:?}"));
-            } else {
-                set_status.set("Vibrated 📳".into());
-            }
-        });
-    };
-
+    // Small platform smoke-test — kept because it's useful for
+    // developers verifying the server round-trip after an OTA.
     let on_hello = move |_| {
-        set_status.set("POSTing /hello…".into());
+        state.status.set("POSTing /hello…".into());
         spawn_local(async move {
             let req = HelloReq { name: "Leptos".into() };
             let url = format!("{SERVER}{}", routes::HELLO);
             match post_json::<HelloReq, HelloResp>(&url, &req).await {
-                Ok(resp) => set_status.set(format!("Server said: {}", resp.message)),
-                Err(e) => set_status.set(format!("POST /hello failed: {e:?}")),
+                Ok(resp) => state.status.set(format!("Server said: {}", resp.message)),
+                Err(e) => state.status.set(format!("POST /hello failed: {e:?}")),
             }
         });
     };
 
     div()
         .attr("class", "flex flex-col gap-4")
-        .child(profile_card(
-            installed_ver,
-            server_ver,
-            status,
-            on_check,
-            on_rollback,
-        ))
-        .child(diagnostics_card(on_vibrate, on_hello))
+        .child(profile_card(state, on_check))
+        .child(diagnostics_card(on_hello))
 }
 
-/// Fan a single [`OtaEvent`] out to the three signals the Settings page
-/// cares about (status line + pills).
-fn apply_ota_event(
-    ev: &OtaEvent,
-    set_status: WriteSignal<String>,
-    set_server_ver: WriteSignal<String>,
-    set_installed_ver: WriteSignal<String>,
-) {
-    // Always update the status line.
-    set_status.set(event_status_line(ev));
-
-    // Some events also carry pill data.
+/// Fan an [`OtaEvent`] out to the shared reactive state.
+fn apply_ota_event(ev: &OtaEvent, state: AppState) {
+    state.status.set(event_status_line(ev));
     match ev {
-        OtaEvent::ServerVersion(v) => set_server_ver.set(v.clone()),
-        OtaEvent::Installed { version } => set_installed_ver.set(version.clone()),
-        OtaEvent::RolledBack => set_installed_ver.set(bundled_placeholder().into()),
+        OtaEvent::ServerVersion(v) => state.server_ver.set(v.clone()),
+        OtaEvent::Installed { version } => state.installed_ver.set(version.clone()),
         _ => {}
     }
 }
@@ -112,17 +68,14 @@ fn apply_ota_event(
 // Profile card
 // ---------------------------------------------------------------------------
 
-fn profile_card<FCheck, FRoll>(
-    installed_ver: ReadSignal<String>,
-    server_ver: ReadSignal<String>,
-    status: ReadSignal<String>,
-    on_check: FCheck,
-    on_rollback: FRoll,
-) -> impl IntoView
+fn profile_card<FCheck>(state: AppState, on_check: FCheck) -> impl IntoView
 where
     FCheck: Fn(ev::MouseEvent) + 'static,
-    FRoll: Fn(ev::MouseEvent) + 'static,
 {
+    let installed_ver = state.installed_ver;
+    let server_ver = state.server_ver;
+    let status = state.status;
+
     div()
         .attr(
             "class",
@@ -176,10 +129,10 @@ where
                     Signal::derive(move || short(&server_ver.get())),
                 )),
         )
-        // Update actions
+        // Update action
         .child(
             div()
-                .attr("class", "mt-4 flex flex-col gap-2")
+                .attr("class", "mt-4")
                 .child(
                     button()
                         .attr(
@@ -190,19 +143,9 @@ where
                         )
                         .on(ev::click, on_check)
                         .child("Check for update"),
-                )
-                .child(
-                    button()
-                        .attr(
-                            "class",
-                            "w-full py-3 rounded-xl bg-slate-100 text-slate-700 \
-                             font-medium text-sm active:bg-slate-200 transition",
-                        )
-                        .on(ev::click, on_rollback)
-                        .child("Roll back to previous bundle"),
                 ),
         )
-        // Status line
+        // Status line (also driven by the background poller)
         .child(
             p().attr(
                 "class",
@@ -217,9 +160,8 @@ where
 // Diagnostics card
 // ---------------------------------------------------------------------------
 
-fn diagnostics_card<FVib, FHello>(on_vibrate: FVib, on_hello: FHello) -> impl IntoView
+fn diagnostics_card<FHello>(on_hello: FHello) -> impl IntoView
 where
-    FVib: Fn(ev::MouseEvent) + 'static,
     FHello: Fn(ev::MouseEvent) + 'static,
 {
     div()
@@ -228,32 +170,18 @@ where
             "rounded-2xl bg-white shadow-sm border border-slate-200 p-5",
         )
         .child(
-            h2()
-                .attr("class", "text-base font-semibold text-slate-900 mb-3")
+            span()
+                .attr("class", "text-base font-semibold text-slate-900 block mb-3")
                 .child("Diagnostics"),
         )
         .child(
-            div()
-                .attr("class", "flex flex-col gap-2")
-                .child(
-                    button()
-                        .attr(
-                            "class",
-                            "w-full py-3 rounded-xl bg-slate-100 text-slate-700 \
-                             font-medium text-sm active:bg-slate-200 transition",
-                        )
-                        .on(ev::click, on_vibrate)
-                        .child("Vibrate (native)"),
+            button()
+                .attr(
+                    "class",
+                    "w-full py-3 rounded-xl bg-slate-100 text-slate-700 \
+                     font-medium text-sm active:bg-slate-200 transition",
                 )
-                .child(
-                    button()
-                        .attr(
-                            "class",
-                            "w-full py-3 rounded-xl bg-slate-100 text-slate-700 \
-                             font-medium text-sm active:bg-slate-200 transition",
-                        )
-                        .on(ev::click, on_hello)
-                        .child("Say hello (POST /hello)"),
-                ),
+                .on(ev::click, on_hello)
+                .child("Say hello (POST /hello)"),
         )
 }

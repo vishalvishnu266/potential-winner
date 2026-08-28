@@ -1,12 +1,12 @@
 //! Typed wrappers around the Capawesome `LiveUpdate` Capacitor plugin.
 //!
 //! These are 1:1 with the plugin's JS API — one Rust `async fn` per
-//! plugin method — so the UI layer can call them without touching
+//! plugin method — so higher layers can call them without touching
 //! `js_sys::Reflect` directly.
 
 use wasm_bindgen::prelude::*;
 
-use crate::capacitor::call_plugin;
+use crate::platform::capacitor::call_plugin;
 
 /// Pull the currently-active bundle id from the plugin. Returns the
 /// plugin's reported `bundleId` (or `""` if the app is still running the
@@ -45,9 +45,7 @@ pub async fn set_next_bundle(live: &js_sys::Object, bundle_id: &str) -> Result<(
 }
 
 /// Restart the WebView immediately into the currently-active bundle.
-/// Falls back is left to the caller (typically `window.location.reload()`).
 pub async fn reload_app(live: &js_sys::Object) -> Result<(), JsValue> {
-    // `reload` takes no options.
     let _ = call_plugin(live, "reload", &js_sys::Object::new()).await?;
     Ok(())
 }
@@ -56,20 +54,10 @@ pub async fn reload_app(live: &js_sys::Object) -> Result<(), JsValue> {
 /// successfully. If this is *not* called within the plugin's ready-timeout
 /// window after a `setNextBundle` + `reload`, the plugin assumes the new
 /// bundle is broken and **automatically rolls back** to the previous one
-/// on the next launch. This is the single most common cause of "my update
-/// keeps getting rolled back" reports.
+/// on the next launch.
 ///
-/// Call this once, as early as possible, after the Leptos app has mounted
-/// and rendered its first frame — see `ui::app`.
+/// Call once, as early as possible, after the Leptos app has mounted.
 pub async fn ready(live: &js_sys::Object) -> Result<(), JsValue> {
     let _ = call_plugin(live, "ready", &js_sys::Object::new()).await?;
-    Ok(())
-}
-
-/// Explicitly roll back to the previously-active bundle. Exposed so the
-/// Settings page can offer a manual "revert" affordance; the plugin will
-/// also do this automatically when [`ready`] is not called in time.
-pub async fn rollback(live: &js_sys::Object) -> Result<(), JsValue> {
-    let _ = call_plugin(live, "rollback", &js_sys::Object::new()).await?;
     Ok(())
 }
