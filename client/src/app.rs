@@ -19,62 +19,74 @@ use uuid::Uuid;
 use crate::api;
 use crate::user_form::{UserForm, UserFormData, UserFormProps};
 
+// ---- small helpers to cut the boilerplate ------------------------------
+
+/// Wrap a view in a Fragment (what `children` slots expect).
+fn frag(v: impl IntoView) -> Fragment {
+    Fragment::new(vec![v.into_view()])
+}
+
+/// Anchor helper: `link("/", true, "Users")` → `<A href="/" exact=true>Users</A>`.
+fn link(href: &'static str, exact: bool, label: &'static str) -> impl IntoView {
+    A(AProps::builder()
+        .href(href)
+        .exact(exact)
+        .children(ToChildren::to_children(move || frag(label)))
+        .build())
+}
+
+/// Same as `link`, but the label can be any view (e.g. an inner `<button>`)
+/// and the href can be an owned `String`.
+fn link_with<F, IV>(href: String, exact: bool, children: F) -> impl IntoView
+where
+    F: Fn() -> IV + 'static,
+    IV: IntoView + 'static,
+{
+    A(AProps::builder()
+        .href(href)
+        .exact(exact)
+        .children(ToChildren::to_children(move || frag(children())))
+        .build())
+}
+
+/// Route helper.
+fn route<F, IV>(path: &'static str, view: F) -> impl IntoView
+where
+    F: Fn() -> IV + 'static,
+    IV: IntoView + 'static,
+{
+    Route(RouteProps::builder().path(path).view(view).build())
+}
+
 #[component]
 pub fn App() -> impl IntoView {
-    // Small helpers for building routes and top-nav links.
-    let nav_bar = nav()
-        .classes("nav-links")
-        .child(
-            A(AProps::builder()
-                .href("/")
-                .exact(true)
-                .children(ToChildren::to_children(|| Fragment::new(vec!["Users".into_view()])))
-                .build()),
-        )
-        .child(
-            A(AProps::builder()
-                .href("/users/new")
-                .children(ToChildren::to_children(|| Fragment::new(vec!["Add user".into_view()])))
-                .build()),
-        );
-
-    let routes = Routes(RoutesProps::builder()
-        .children(ToChildren::to_children(move || {
-            Fragment::new(vec![
-                Route(
-                    RouteProps::builder()
-                        .path("/")
-                        .view(UsersListPage)
-                        .build(),
-                )
-                .into_view(),
-                Route(
-                    RouteProps::builder()
-                        .path("/users/new")
-                        .view(CreateUserPage)
-                        .build(),
-                )
-                .into_view(),
-                Route(
-                    RouteProps::builder()
-                        .path("/users/:id/edit")
-                        .view(EditUserPage)
-                        .build(),
-                )
-                .into_view(),
-            ])
-        }))
-        .build());
-
-    let container = div()
-        .classes("container")
-        .child(leptos::html::h1().child("Leptos + Axum User CRUD"))
-        .child(nav_bar)
-        .child(routes);
-
+    // Everything renders inside <Router>. IMPORTANT: build the entire
+    // sub-tree inside the `children` closure so nothing gets cloned/moved
+    // twice.
     Router(RouterProps::builder()
         .children(ToChildren::to_children(move || {
-            Fragment::new(vec![container.clone().into_view()])
+            let nav_bar = nav()
+                .classes("nav-links")
+                .child(link("/", true, "Users"))
+                .child(link("/users/new", false, "Add user"));
+
+            let routes = Routes(RoutesProps::builder()
+                .children(ToChildren::to_children(|| {
+                    Fragment::new(vec![
+                        route("/", UsersListPage).into_view(),
+                        route("/users/new", CreateUserPage).into_view(),
+                        route("/users/:id/edit", EditUserPage).into_view(),
+                    ])
+                }))
+                .build());
+
+            let container = div()
+                .classes("container")
+                .child(leptos::html::h1().child("Leptos + Axum User CRUD"))
+                .child(nav_bar)
+                .child(routes);
+
+            frag(container)
         }))
         .build())
 }
@@ -143,12 +155,7 @@ fn UsersListPage() -> impl IntoView {
         if !loading.get() && users.get().is_empty() {
             p().attr("style", "color:#6b7280")
                 .child("No users yet — ")
-                .child(A(AProps::builder()
-                    .href("/users/new")
-                    .children(ToChildren::to_children(|| {
-                        Fragment::new(vec!["add one".into_view()])
-                    }))
-                    .build()))
+                .child(link("/users/new", false, "add one"))
                 .child(".")
                 .into_view()
         } else {
@@ -182,14 +189,9 @@ fn UsersListPage() -> impl IntoView {
                     })
                     .child(move || if is_deleting.get() { "Deleting…" } else { "Delete" });
 
-                let edit_btn = A(AProps::builder()
-                    .href(edit_href)
-                    .children(ToChildren::to_children(|| {
-                        Fragment::new(vec![
-                            button().classes("secondary").child("Edit").into_view(),
-                        ])
-                    }))
-                    .build());
+                let edit_btn = link_with(edit_href, false, || {
+                    button().classes("secondary").child("Edit")
+                });
 
                 tr()
                     .attr("style", move || {
