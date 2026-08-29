@@ -1,42 +1,80 @@
-//! Root component + routing.
+//! Root component + routing, written using Leptos's **builder API** only.
+//! No `view!` macro is used anywhere in the client.
 //!
 //! Three pages backed by `leptos_router`:
 //!   * `/`                       → `UsersListPage`   (list + Edit / Delete)
 //!   * `/users/new`              → `CreateUserPage`
 //!   * `/users/:id/edit`         → `EditUserPage`
 //!
-//! Every network operation drives a loading/saving flag. The UI is only
-//! updated with the new state *after* the server has responded, matching
-//! a realistic remote-data flow. Try `DEMO_DELAY_MS=1500 cargo run -p server`
-//! to make the effect more dramatic.
+//! Every network operation drives a loading/saving flag. The UI updates
+//! only *after* the server responds. The Axum server sleeps 1 s per
+//! request so the pattern is clearly visible.
 
+use leptos::html::{button, div, h3, nav, p, span, table, tbody, td, th, thead, tr};
 use leptos::*;
 use leptos_router::*;
 use shared::{CreateUser, SimpleDate, UpdateUser, User};
 use uuid::Uuid;
 
 use crate::api;
-use crate::user_form::{UserForm, UserFormData};
+use crate::user_form::{UserForm, UserFormData, UserFormProps};
 
 #[component]
 pub fn App() -> impl IntoView {
-    view! {
-        <Router>
-            <div class="container">
-                <h1>"Leptos + Axum User CRUD"</h1>
-                <nav class="nav-links">
-                    <A href="/" exact=true>"Users"</A>
-                    <A href="/users/new">"Add user"</A>
-                </nav>
+    // Small helpers for building routes and top-nav links.
+    let nav_bar = nav()
+        .classes("nav-links")
+        .child(
+            A(AProps::builder()
+                .href("/")
+                .exact(true)
+                .children(ToChildren::to_children(|| "Users".into_view()))
+                .build()),
+        )
+        .child(
+            A(AProps::builder()
+                .href("/users/new")
+                .children(ToChildren::to_children(|| "Add user".into_view()))
+                .build()),
+        );
 
-                <Routes>
-                    <Route path="/"                view=UsersListPage/>
-                    <Route path="/users/new"       view=CreateUserPage/>
-                    <Route path="/users/:id/edit"  view=EditUserPage/>
-                </Routes>
-            </div>
-        </Router>
-    }
+    let routes = Routes(RoutesProps::builder()
+        .children(ToChildren::to_children(move || {
+            Fragment::new(vec![
+                Route(
+                    RouteProps::builder()
+                        .path("/")
+                        .view(UsersListPage)
+                        .build(),
+                )
+                .into_view(),
+                Route(
+                    RouteProps::builder()
+                        .path("/users/new")
+                        .view(CreateUserPage)
+                        .build(),
+                )
+                .into_view(),
+                Route(
+                    RouteProps::builder()
+                        .path("/users/:id/edit")
+                        .view(EditUserPage)
+                        .build(),
+                )
+                .into_view(),
+            ])
+        }))
+        .build());
+
+    let container = div()
+        .classes("container")
+        .child(leptos::html::h1().child("Leptos + Axum User CRUD"))
+        .child(nav_bar)
+        .child(routes);
+
+    Router(RouterProps::builder()
+        .children(ToChildren::to_children(move || container.clone().into_view()))
+        .build())
 }
 
 // -------------------------------------------------------------------------
@@ -48,15 +86,12 @@ fn UsersListPage() -> impl IntoView {
     let (users, set_users) = create_signal::<Vec<User>>(Vec::new());
     let (error, set_error) = create_signal::<Option<String>>(None);
     let (loading, set_loading) = create_signal(false);
-    // Which user id is currently being deleted (so we can grey out just that row).
     let (deleting, set_deleting) = create_signal::<Option<Uuid>>(None);
 
     let refresh = move || {
         set_loading.set(true);
         spawn_local(async move {
-            let result = api::list_users().await;
-            // Only touch the UI *after* the server responds.
-            match result {
+            match api::list_users().await {
                 Ok(list) => { set_users.set(list); set_error.set(None); }
                 Err(e) => set_error.set(Some(format!("Failed to load users: {e}"))),
             }
@@ -64,7 +99,6 @@ fn UsersListPage() -> impl IntoView {
         });
     };
 
-    // Initial load on mount.
     {
         let refresh = refresh.clone();
         create_effect(move |_| { refresh(); });
@@ -75,12 +109,8 @@ fn UsersListPage() -> impl IntoView {
         set_deleting.set(Some(id));
         let refresh = refresh.clone();
         spawn_local(async move {
-            let result = api::delete_user(id).await;
-            match result {
-                Ok(()) => {
-                    set_deleting.set(None);
-                    refresh(); // reload from server; UI only changes when this returns
-                }
+            match api::delete_user(id).await {
+                Ok(()) => { set_deleting.set(None); refresh(); }
                 Err(e) => {
                     set_error.set(Some(format!("Delete failed: {e}")));
                     set_deleting.set(None);
@@ -89,83 +119,113 @@ fn UsersListPage() -> impl IntoView {
         });
     };
 
-    view! {
-        <div class="card">
-            <h3>"Users"</h3>
+    // Reactive fragments -----------------------------------------------------
+    let error_line = move || match error.get() {
+        Some(e) => div().classes("error").child(e).into_view(),
+        None => ().into_view(),
+    };
 
-            <Show when=move || error.get().is_some() fallback=|| view!{ <></> }>
-                <div class="error">{move || error.get().unwrap_or_default()}</div>
-            </Show>
+    let loading_line = move || {
+        if loading.get() {
+            div()
+                .classes("loading")
+                .child(span().classes("spinner"))
+                .child("Loading users from server…")
+                .into_view()
+        } else {
+            ().into_view()
+        }
+    };
 
-            <Show when=move || loading.get() fallback=|| view! { <></> }>
-                <div class="loading"><span class="spinner"></span>"Loading users from server…"</div>
-            </Show>
+    let empty_line = move || {
+        if !loading.get() && users.get().is_empty() {
+            p().attr("style", "color:#6b7280")
+                .child("No users yet — ")
+                .child(A(AProps::builder()
+                    .href("/users/new")
+                    .children(ToChildren::to_children(|| "add one".into_view()))
+                    .build()))
+                .child(".")
+                .into_view()
+        } else {
+            ().into_view()
+        }
+    };
 
-            <Show
-                when=move || !loading.get() && users.get().is_empty()
-                fallback=|| view! { <></> }
-            >
-                <p style="color:#6b7280">
-                    "No users yet — "<A href="/users/new">"add one"</A>"."
-                </p>
-            </Show>
+    let table_view = move || {
+        if users.get().is_empty() {
+            return ().into_view();
+        }
 
-            <Show
-                when=move || !users.get().is_empty()
-                fallback=|| view! { <></> }
-            >
-                <table>
-                    <thead>
-                        <tr>
-                            <th>"Name"</th>
-                            <th>"Age"</th>
-                            <th>"DOB"</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <For
-                            each=move || users.get()
-                            key=|u| u.id
-                            children=move |u: User| {
-                                let id = u.id;
-                                let edit_href = format!("/users/{id}/edit");
-                                let is_deleting = create_memo(move |_| deleting.get() == Some(id));
-                                let row_style = move || if is_deleting.get() {
-                                    "opacity: 0.5;"
-                                } else { "" };
-                                view! {
-                                    <tr style=row_style>
-                                        <td>{u.name.clone()}</td>
-                                        <td>{u.age}</td>
-                                        <td>{u.dob.to_iso()}</td>
-                                        <td>
-                                            <div class="actions">
-                                                <A href=edit_href>
-                                                    <button class="secondary">"Edit"</button>
-                                                </A>
-                                                <button
-                                                    class="danger"
-                                                    prop:disabled=move || deleting.get().is_some()
-                                                    on:click=move |_| delete_user(id)
-                                                >
-                                                    <Show when=move || is_deleting.get()
-                                                          fallback=|| view!{ <></> }>
-                                                        <span class="spinner"></span>
-                                                    </Show>
-                                                    {move || if is_deleting.get() { "Deleting…" } else { "Delete" }}
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        />
-                    </tbody>
-                </table>
-            </Show>
-        </div>
-    }
+        let rows = For(ForProps::builder()
+            .each(move || users.get())
+            .key(|u: &User| u.id)
+            .children(move |u: User| {
+                let id = u.id;
+                let edit_href = format!("/users/{id}/edit");
+                let is_deleting = create_memo(move |_| deleting.get() == Some(id));
+
+                let delete_btn = button()
+                    .classes("danger")
+                    .prop("disabled", move || deleting.get().is_some())
+                    .on(ev::click, move |_| delete_user(id))
+                    .child(move || {
+                        if is_deleting.get() {
+                            span().classes("spinner").into_view()
+                        } else {
+                            ().into_view()
+                        }
+                    })
+                    .child(move || if is_deleting.get() { "Deleting…" } else { "Delete" });
+
+                let edit_btn = A(AProps::builder()
+                    .href(edit_href)
+                    .children(ToChildren::to_children(|| {
+                        button().classes("secondary").child("Edit").into_view()
+                    }))
+                    .build());
+
+                tr()
+                    .attr("style", move || {
+                        if is_deleting.get() { "opacity: 0.5;" } else { "" }
+                    })
+                    .child(td().child(u.name.clone()))
+                    .child(td().child(u.age))
+                    .child(td().child(u.dob.to_iso()))
+                    .child(
+                        td().child(
+                            div()
+                                .classes("actions")
+                                .child(edit_btn)
+                                .child(delete_btn),
+                        ),
+                    )
+                    .into_view()
+            })
+            .build());
+
+        table()
+            .child(
+                thead().child(
+                    tr()
+                        .child(th().child("Name"))
+                        .child(th().child("Age"))
+                        .child(th().child("DOB"))
+                        .child(th()),
+                ),
+            )
+            .child(tbody().child(rows))
+            .into_view()
+    };
+
+    div()
+        .classes("card")
+        .child(h3().child("Users"))
+        .child(error_line)
+        .child(loading_line)
+        .child(empty_line)
+        .child(table_view)
+        .into_view()
 }
 
 // -------------------------------------------------------------------------
@@ -186,52 +246,51 @@ fn CreateUserPage() -> impl IntoView {
 
     let on_submit = {
         let navigate = navigate.clone();
-        move |data: UserFormData| {
+        Callback::new(move |data: UserFormData| {
             let navigate = navigate.clone();
             set_saving.set(true);
             set_error.set(None);
             spawn_local(async move {
                 let payload = CreateUser { name: data.name, age: data.age, dob: data.dob };
-                let result = api::create_user(payload).await;
-                // UI only advances (navigate) after the server confirms.
-                match result {
-                    Ok(_) => {
-                        set_saving.set(false);
-                        navigate("/", NavigateOptions::default());
-                    }
+                match api::create_user(payload).await {
+                    Ok(_) => { set_saving.set(false); navigate("/", NavigateOptions::default()); }
                     Err(e) => {
                         set_error.set(Some(format!("Create failed: {e}")));
                         set_saving.set(false);
                     }
                 }
             });
-        }
+        })
     };
 
     let on_cancel = {
         let navigate = navigate.clone();
-        move |_| {
+        Callback::new(move |_| {
             if !saving.get() {
                 navigate("/", NavigateOptions::default());
             }
-        }
+        })
     };
 
-    view! {
-        <div class="card">
-            <h3>"Add user"</h3>
-            <UserForm
-                initial=initial
-                submit_label="Add".to_string()
-                on_submit=on_submit
-                on_cancel=Callback::new(on_cancel)
-                saving=saving
-            />
-            <Show when=move || error.get().is_some() fallback=|| view!{ <></> }>
-                <div class="error">{move || error.get().unwrap_or_default()}</div>
-            </Show>
-        </div>
-    }
+    let form = UserForm(UserFormProps::builder()
+        .initial(initial)
+        .submit_label("Add".to_string())
+        .on_submit(on_submit)
+        .on_cancel(on_cancel)
+        .saving(Signal::derive(move || saving.get()))
+        .build());
+
+    let error_line = move || match error.get() {
+        Some(e) => div().classes("error").child(e).into_view(),
+        None => ().into_view(),
+    };
+
+    div()
+        .classes("card")
+        .child(h3().child("Add user"))
+        .child(form)
+        .child(error_line)
+        .into_view()
 }
 
 // -------------------------------------------------------------------------
@@ -270,7 +329,7 @@ fn EditUserPage() -> impl IntoView {
 
     let on_submit = {
         let navigate = navigate.clone();
-        move |data: UserFormData| {
+        Callback::new(move |data: UserFormData| {
             let navigate = navigate.clone();
             let Some(id) = user_id.get() else { return; };
             set_saving.set(true);
@@ -281,67 +340,70 @@ fn EditUserPage() -> impl IntoView {
                     age: Some(data.age),
                     dob: Some(data.dob),
                 };
-                let result = api::update_user(id, payload).await;
-                match result {
-                    Ok(_) => {
-                        set_saving.set(false);
-                        navigate("/", NavigateOptions::default());
-                    }
+                match api::update_user(id, payload).await {
+                    Ok(_) => { set_saving.set(false); navigate("/", NavigateOptions::default()); }
                     Err(e) => {
                         set_error.set(Some(format!("Update failed: {e}")));
                         set_saving.set(false);
                     }
                 }
             });
-        }
+        })
     };
 
     let on_cancel = {
         let navigate = navigate.clone();
-        move |_| {
+        Callback::new(move |_| {
             if !saving.get() {
                 navigate("/", NavigateOptions::default());
             }
+        })
+    };
+
+    // Body: either "Loading…" or the form, depending on whether the user
+    // has been fetched. Errors that occur before the form loads are shown
+    // in the same spot as the loading indicator.
+    let body = move || {
+        if let Some(data) = loaded.get() {
+            UserForm(UserFormProps::builder()
+                .initial(data)
+                .submit_label("Update".to_string())
+                .on_submit(on_submit)
+                .on_cancel(on_cancel)
+                .saving(Signal::derive(move || saving.get()))
+                .build())
+                .into_view()
+        } else {
+            p().classes("loading")
+                .child(move || {
+                    if error.get().is_none() {
+                        span().classes("spinner").into_view()
+                    } else {
+                        ().into_view()
+                    }
+                })
+                .child(move || match error.get() {
+                    Some(e) => e,
+                    None => "Loading user from server…".to_string(),
+                })
+                .into_view()
         }
     };
 
-    view! {
-        <div class="card">
-            <h3>"Edit user"</h3>
+    let error_line = move || {
+        // Only show the error line here once the form is visible; before
+        // that, the error is rendered inside `body`.
+        if error.get().is_some() && loaded.get().is_some() {
+            div().classes("error").child(error.get().unwrap_or_default()).into_view()
+        } else {
+            ().into_view()
+        }
+    };
 
-            <Show
-                when=move || loaded.get().is_some()
-                fallback=move || view! {
-                    <p class="loading">
-                        <Show when=move || error.get().is_none() fallback=|| view!{ <></> }>
-                            <span class="spinner"></span>
-                        </Show>
-                        {move || match error.get() {
-                            Some(e) => e,
-                            None => "Loading user from server…".to_string(),
-                        }}
-                    </p>
-                }
-            >
-                {
-                    // Safe unwrap: guarded by <Show when=loaded.is_some()>.
-                    let data = loaded.get().unwrap();
-                    view! {
-                        <UserForm
-                            initial=data
-                            submit_label="Update".to_string()
-                            on_submit=on_submit.clone()
-                            on_cancel=Callback::new(on_cancel.clone())
-                            saving=saving
-                        />
-                    }
-                }
-            </Show>
-
-            <Show when=move || error.get().is_some() && loaded.get().is_some()
-                  fallback=|| view!{ <></> }>
-                <div class="error">{move || error.get().unwrap_or_default()}</div>
-            </Show>
-        </div>
-    }
+    div()
+        .classes("card")
+        .child(h3().child("Edit user"))
+        .child(body)
+        .child(error_line)
+        .into_view()
 }
