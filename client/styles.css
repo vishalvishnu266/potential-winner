@@ -140,37 +140,41 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
   font-weight: 600;
 }
 
-/* Higher-specificity selector so the global `button { ... }` rule
-   doesn't paint every day-cell blue-on-white. */
-.datepicker-grid button.datepicker-day {
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  padding: 8px 0;
-  text-align: center;
+/* Force-override the global `button { background: blue; color: white }`
+   rule for day cells. Uses !important because the global rule sets both
+   background *and* color, and we need to reset both unconditionally. */
+.datepicker-grid button.datepicker-day,
+.datepicker-popup button.datepicker-day {
+  cursor: pointer !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  color: #1f2937 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  padding: 8px 0 !important;
+  text-align: center !important;
+  min-width: 0 !important;
 }
 .datepicker-grid button.datepicker-day:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: var(--text);
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #1f2937 !important;
 }
 .datepicker-grid button.datepicker-day.other {
-  color: #94a3b8;
-  background: transparent;
+  color: #94a3b8 !important;
+  background-color: #ffffff !important;
 }
 .datepicker-grid button.datepicker-day.selected {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+  border-color: #3b82f6 !important;
 }
 .datepicker-grid button.datepicker-day.selected:hover {
-  background: var(--primary-hover);
-  color: #ffffff;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
 }
 
 /* Small nav links used in page headers */
@@ -186,3 +190,27 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
 }
 .nav-links a:hover { text-decoration: underline; }
 .nav-links a.active { font-weight: 600; color: var(--text); }
+
+/* Loading / disabled states */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.loading {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+  margin: 8px 0;
+}
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border: 2px solid #cbd5e1;
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: -1px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

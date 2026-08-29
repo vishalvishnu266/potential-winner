@@ -5,7 +5,10 @@
 //!   * `/users/new`              → `CreateUserPage`
 //!   * `/users/:id/edit`         → `EditUserPage`
 //!
-//! Each page owns its own state and calls into `api` for the HTTP work.
+//! Every network operation drives a loading/saving flag. The UI is only
+//! updated with the new state *after* the server has responded, matching
+//! a realistic remote-data flow. Try `DEMO_DELAY_MS=1500 cargo run -p server`
+//! to make the effect more dramatic.
 
 use leptos::*;
 use leptos_router::*;
@@ -44,13 +47,20 @@ pub fn App() -> impl IntoView {
 fn UsersListPage() -> impl IntoView {
     let (users, set_users) = create_signal::<Vec<User>>(Vec::new());
     let (error, set_error) = create_signal::<Option<String>>(None);
+    let (loading, set_loading) = create_signal(false);
+    // Which user id is currently being deleted (so we can grey out just that row).
+    let (deleting, set_deleting) = create_signal::<Option<Uuid>>(None);
 
     let refresh = move || {
+        set_loading.set(true);
         spawn_local(async move {
-            match api::list_users().await {
+            let result = api::list_users().await;
+            // Only touch the UI *after* the server responds.
+            match result {
                 Ok(list) => { set_users.set(list); set_error.set(None); }
                 Err(e) => set_error.set(Some(format!("Failed to load users: {e}"))),
             }
+            set_loading.set(false);
         });
     };
 
@@ -61,11 +71,20 @@ fn UsersListPage() -> impl IntoView {
     }
 
     let delete_user = move |id: Uuid| {
+        if deleting.get().is_some() { return; }
+        set_deleting.set(Some(id));
         let refresh = refresh.clone();
         spawn_local(async move {
-            match api::delete_user(id).await {
-                Ok(()) => refresh(),
-                Err(e) => set_error.set(Some(format!("Delete failed: {e}"))),
+            let result = api::delete_user(id).await;
+            match result {
+                Ok(()) => {
+                    set_deleting.set(None);
+                    refresh(); // reload from server; UI only changes when this returns
+                }
+                Err(e) => {
+                    set_error.set(Some(format!("Delete failed: {e}")));
+                    set_deleting.set(None);
+                }
             }
         });
     };
@@ -78,13 +97,22 @@ fn UsersListPage() -> impl IntoView {
                 <div class="error">{move || error.get().unwrap_or_default()}</div>
             </Show>
 
+            <Show when=move || loading.get() fallback=|| view! { <></> }>
+                <div class="loading"><span class="spinner"></span>"Loading users from server…"</div>
+            </Show>
+
+            <Show
+                when=move || !loading.get() && users.get().is_empty()
+                fallback=|| view! { <></> }
+            >
+                <p style="color:#6b7280">
+                    "No users yet — "<A href="/users/new">"add one"</A>"."
+                </p>
+            </Show>
+
             <Show
                 when=move || !users.get().is_empty()
-                fallback=|| view! {
-                    <p style="color:#6b7280">
-                        "No users yet — "<A href="/users/new">"add one"</A>"."
-                    </p>
-                }
+                fallback=|| view! { <></> }
             >
                 <table>
                     <thead>
@@ -102,8 +130,12 @@ fn UsersListPage() -> impl IntoView {
                             children=move |u: User| {
                                 let id = u.id;
                                 let edit_href = format!("/users/{id}/edit");
+                                let is_deleting = create_memo(move |_| deleting.get() == Some(id));
+                                let row_style = move || if is_deleting.get() {
+                                    "opacity: 0.5;"
+                                } else { "" };
                                 view! {
-                                    <tr>
+                                    <tr style=row_style>
                                         <td>{u.name.clone()}</td>
                                         <td>{u.age}</td>
                                         <td>{u.dob.to_iso()}</td>
@@ -114,8 +146,15 @@ fn UsersListPage() -> impl IntoView {
                                                 </A>
                                                 <button
                                                     class="danger"
+                                                    prop:disabled=move || deleting.get().is_some()
                                                     on:click=move |_| delete_user(id)
-                                                >"Delete"</button>
+                                                >
+                                                    <Show when=move || is_deleting.get()
+                                                          fallback=|| view!{ <></> }>
+                                                        <span class="spinner"></span>
+                                                    </Show>
+                                                    {move || if is_deleting.get() { "Deleting…" } else { "Delete" }}
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -136,6 +175,7 @@ fn UsersListPage() -> impl IntoView {
 #[component]
 fn CreateUserPage() -> impl IntoView {
     let (error, set_error) = create_signal::<Option<String>>(None);
+    let (saving, set_saving) = create_signal(false);
     let navigate = use_navigate();
 
     let initial = UserFormData {
@@ -148,11 +188,21 @@ fn CreateUserPage() -> impl IntoView {
         let navigate = navigate.clone();
         move |data: UserFormData| {
             let navigate = navigate.clone();
+            set_saving.set(true);
+            set_error.set(None);
             spawn_local(async move {
                 let payload = CreateUser { name: data.name, age: data.age, dob: data.dob };
-                match api::create_user(payload).await {
-                    Ok(_) => navigate("/", NavigateOptions::default()),
-                    Err(e) => set_error.set(Some(format!("Create failed: {e}"))),
+                let result = api::create_user(payload).await;
+                // UI only advances (navigate) after the server confirms.
+                match result {
+                    Ok(_) => {
+                        set_saving.set(false);
+                        navigate("/", NavigateOptions::default());
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Create failed: {e}")));
+                        set_saving.set(false);
+                    }
                 }
             });
         }
@@ -160,7 +210,11 @@ fn CreateUserPage() -> impl IntoView {
 
     let on_cancel = {
         let navigate = navigate.clone();
-        move |_| navigate("/", NavigateOptions::default())
+        move |_| {
+            if !saving.get() {
+                navigate("/", NavigateOptions::default());
+            }
+        }
     };
 
     view! {
@@ -171,6 +225,7 @@ fn CreateUserPage() -> impl IntoView {
                 submit_label="Add".to_string()
                 on_submit=on_submit
                 on_cancel=Callback::new(on_cancel)
+                saving=saving
             />
             <Show when=move || error.get().is_some() fallback=|| view!{ <></> }>
                 <div class="error">{move || error.get().unwrap_or_default()}</div>
@@ -190,6 +245,7 @@ fn EditUserPage() -> impl IntoView {
     let (error, set_error) = create_signal::<Option<String>>(None);
     let (loaded, set_loaded) = create_signal::<Option<UserFormData>>(None);
     let (user_id, set_user_id) = create_signal::<Option<Uuid>>(None);
+    let (saving, set_saving) = create_signal(false);
 
     // Load the user whose id is in the URL.
     create_effect(move |_| {
@@ -217,15 +273,24 @@ fn EditUserPage() -> impl IntoView {
         move |data: UserFormData| {
             let navigate = navigate.clone();
             let Some(id) = user_id.get() else { return; };
+            set_saving.set(true);
+            set_error.set(None);
             spawn_local(async move {
                 let payload = UpdateUser {
                     name: Some(data.name),
                     age: Some(data.age),
                     dob: Some(data.dob),
                 };
-                match api::update_user(id, payload).await {
-                    Ok(_) => navigate("/", NavigateOptions::default()),
-                    Err(e) => set_error.set(Some(format!("Update failed: {e}"))),
+                let result = api::update_user(id, payload).await;
+                match result {
+                    Ok(_) => {
+                        set_saving.set(false);
+                        navigate("/", NavigateOptions::default());
+                    }
+                    Err(e) => {
+                        set_error.set(Some(format!("Update failed: {e}")));
+                        set_saving.set(false);
+                    }
                 }
             });
         }
@@ -233,7 +298,11 @@ fn EditUserPage() -> impl IntoView {
 
     let on_cancel = {
         let navigate = navigate.clone();
-        move |_| navigate("/", NavigateOptions::default())
+        move |_| {
+            if !saving.get() {
+                navigate("/", NavigateOptions::default());
+            }
+        }
     };
 
     view! {
@@ -243,10 +312,13 @@ fn EditUserPage() -> impl IntoView {
             <Show
                 when=move || loaded.get().is_some()
                 fallback=move || view! {
-                    <p style="color:#6b7280">
+                    <p class="loading">
+                        <Show when=move || error.get().is_none() fallback=|| view!{ <></> }>
+                            <span class="spinner"></span>
+                        </Show>
                         {move || match error.get() {
                             Some(e) => e,
-                            None => "Loading…".to_string(),
+                            None => "Loading user from server…".to_string(),
                         }}
                     </p>
                 }
@@ -260,6 +332,7 @@ fn EditUserPage() -> impl IntoView {
                             submit_label="Update".to_string()
                             on_submit=on_submit.clone()
                             on_cancel=Callback::new(on_cancel.clone())
+                            saving=saving
                         />
                     }
                 }

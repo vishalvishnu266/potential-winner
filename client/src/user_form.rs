@@ -4,9 +4,11 @@
 //!   * `initial` — the values the form starts with (empty for create,
 //!     current user for edit).
 //!   * `submit_label` — text on the submit button ("Add" vs "Update").
-//!   * `on_submit` — callback that receives the finished
-//!     `(name, age, dob)` tuple. The parent decides whether to POST or PUT.
-//!   * `on_cancel` — optional cancel handler (used by the edit page).
+//!   * `saving` — reactive flag; when `true` the submit / cancel buttons
+//!     are disabled and a spinner appears next to the submit button.
+//!     This is how the parent tells us "waiting on the server".
+//!   * `on_submit` — callback receiving the finished `(name, age, dob)`.
+//!   * `on_cancel` — optional cancel handler.
 
 use leptos::*;
 use shared::SimpleDate;
@@ -26,6 +28,7 @@ pub fn UserForm(
     #[prop(into)] submit_label: MaybeSignal<String>,
     #[prop(into)] on_submit: Callback<UserFormData>,
     #[prop(optional, into)] on_cancel: Option<Callback<()>>,
+    #[prop(optional, into)] saving: MaybeSignal<bool>,
 ) -> impl IntoView {
     let init = initial.get_untracked();
     let (name, set_name) = create_signal(init.name.clone());
@@ -42,6 +45,7 @@ pub fn UserForm(
     });
 
     let submit = move |_| {
+        if saving.get() { return; }
         let n = name.get().trim().to_string();
         if n.is_empty() {
             set_error.set(Some("Name is required".into()));
@@ -58,6 +62,7 @@ pub fn UserForm(
                 <input
                     type="text"
                     prop:value=move || name.get()
+                    prop:disabled=move || saving.get()
                     on:input=move |ev| set_name.set(event_target_value(&ev))
                 />
             </label>
@@ -68,6 +73,7 @@ pub fn UserForm(
                     type="number"
                     min="0"
                     prop:value=move || age.get().to_string()
+                    prop:disabled=move || saving.get()
                     on:input=move |ev| {
                         let v = event_target_value(&ev).parse::<u32>().unwrap_or(0);
                         set_age.set(v);
@@ -83,10 +89,21 @@ pub fn UserForm(
                 />
             </label>
 
-            <button on:click=submit>{move || submit_label.get()}</button>
+            <button on:click=submit prop:disabled=move || saving.get()>
+                <Show when=move || saving.get() fallback=|| view! { <></> }>
+                    <span class="spinner"></span>
+                </Show>
+                {move || submit_label.get()}
+            </button>
 
             {move || on_cancel.map(|cb| view! {
-                <button class="secondary" on:click=move |_| cb.call(())>"Cancel"</button>
+                <button
+                    class="secondary"
+                    prop:disabled=move || saving.get()
+                    on:click=move |_| cb.call(())
+                >
+                    "Cancel"
+                </button>
             })}
         </div>
 

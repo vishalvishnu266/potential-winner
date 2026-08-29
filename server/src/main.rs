@@ -7,6 +7,7 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 
 use axum::{
@@ -17,12 +18,17 @@ use axum::{
     Json, Router,
 };
 use shared::{CreateUser, UpdateUser, User};
+use tokio::time::sleep;
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
 use tracing_subscriber::{fmt, EnvFilter};
 use uuid::Uuid;
+
+/// Artificial latency added to every handler so the UI's "wait for the
+/// server before updating" pattern is clearly visible.
+const DEMO_DELAY: Duration = Duration::from_millis(1000);
 
 /// Shared server state — a map of users keyed by their id.
 #[derive(Default, Clone)]
@@ -66,6 +72,7 @@ async fn main() {
 // --------------------------------------------------------------------------
 
 async fn list_users(State(state): State<AppState>) -> Json<Vec<User>> {
+    sleep(DEMO_DELAY).await;
     let users = state.users.read().unwrap();
     let mut list: Vec<User> = users.values().cloned().collect();
     // Stable, human-friendly ordering.
@@ -77,6 +84,7 @@ async fn get_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<User>, StatusCode> {
+    sleep(DEMO_DELAY).await;
     let users = state.users.read().unwrap();
     users
         .get(&id)
@@ -89,6 +97,7 @@ async fn create_user(
     State(state): State<AppState>,
     Json(payload): Json<CreateUser>,
 ) -> impl IntoResponse {
+    sleep(DEMO_DELAY).await;
     let user = User {
         id: Uuid::new_v4(),
         name: payload.name,
@@ -108,6 +117,7 @@ async fn update_user(
     Path(id): Path<Uuid>,
     Json(payload): Json<UpdateUser>,
 ) -> Result<Json<User>, StatusCode> {
+    sleep(DEMO_DELAY).await;
     let mut users = state.users.write().unwrap();
     let existing = users.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
     if let Some(name) = payload.name {
@@ -126,6 +136,7 @@ async fn delete_user(
     State(state): State<AppState>,
     Path(id): Path<Uuid>,
 ) -> StatusCode {
+    sleep(DEMO_DELAY).await;
     let removed = state.users.write().unwrap().remove(&id).is_some();
     if removed {
         StatusCode::NO_CONTENT
