@@ -9,7 +9,7 @@ leptos = { version = "0.6", features = ["csr"] }
 leptos_router = { version = "0.6", features = ["csr"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-uuid = { workspace = true }
+uuid = { version = "1.26.0", features = ["v4", "js"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
