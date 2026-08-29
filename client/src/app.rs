@@ -28,13 +28,13 @@ pub fn App() -> impl IntoView {
             A(AProps::builder()
                 .href("/")
                 .exact(true)
-                .children(ToChildren::to_children(|| "Users".into_view()))
+                .children(ToChildren::to_children(|| Fragment::new(vec!["Users".into_view()])))
                 .build()),
         )
         .child(
             A(AProps::builder()
                 .href("/users/new")
-                .children(ToChildren::to_children(|| "Add user".into_view()))
+                .children(ToChildren::to_children(|| Fragment::new(vec!["Add user".into_view()])))
                 .build()),
         );
 
@@ -73,7 +73,9 @@ pub fn App() -> impl IntoView {
         .child(routes);
 
     Router(RouterProps::builder()
-        .children(ToChildren::to_children(move || container.clone().into_view()))
+        .children(ToChildren::to_children(move || {
+            Fragment::new(vec![container.clone().into_view()])
+        }))
         .build())
 }
 
@@ -143,7 +145,9 @@ fn UsersListPage() -> impl IntoView {
                 .child("No users yet — ")
                 .child(A(AProps::builder()
                     .href("/users/new")
-                    .children(ToChildren::to_children(|| "add one".into_view()))
+                    .children(ToChildren::to_children(|| {
+                        Fragment::new(vec!["add one".into_view()])
+                    }))
                     .build()))
                 .child(".")
                 .into_view()
@@ -181,7 +185,9 @@ fn UsersListPage() -> impl IntoView {
                 let edit_btn = A(AProps::builder()
                     .href(edit_href)
                     .children(ToChildren::to_children(|| {
-                        button().classes("secondary").child("Edit").into_view()
+                        Fragment::new(vec![
+                            button().classes("secondary").child("Edit").into_view(),
+                        ])
                     }))
                     .build());
 
