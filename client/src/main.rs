@@ -9,5 +9,7 @@ mod user_form;
 
 fn main() {
     console_error_panic_hook::set_once();
-    mount_to_body(|| view! { <app::App/> });
+    // No `view!` macro anywhere — the whole UI is built with the
+    // Leptos builder API (see `app.rs`, `user_form.rs`, `datepicker.rs`).
+    mount_to_body(|| app::App(app::AppProps {}));
 }

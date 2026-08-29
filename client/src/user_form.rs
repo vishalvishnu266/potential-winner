@@ -1,15 +1,10 @@
-//! Reusable form used by both the "Create user" and "Edit user" pages.
+//! Reusable form component written entirely with Leptos's builder API.
 //!
-//! The parent supplies:
-//!   * `initial` — the values the form starts with (empty for create,
-//!     current user for edit).
-//!   * `submit_label` — text on the submit button ("Add" vs "Update").
-//!   * `saving` — reactive flag; when `true` the submit / cancel buttons
-//!     are disabled and a spinner appears next to the submit button.
-//!     This is how the parent tells us "waiting on the server".
-//!   * `on_submit` — callback receiving the finished `(name, age, dob)`.
-//!   * `on_cancel` — optional cancel handler.
+//! Same public shape as before: `initial`, `submit_label`, `on_submit`,
+//! optional `on_cancel`, and a reactive `saving` flag that disables the
+//! inputs / shows a spinner while a request is in flight.
 
+use leptos::html::{button, div, input, label, span};
 use leptos::*;
 use shared::SimpleDate;
 
@@ -36,7 +31,7 @@ pub fn UserForm(
     let (dob, set_dob) = create_signal(init.dob);
     let (error, set_error) = create_signal::<Option<String>>(None);
 
-    // Re-sync fields whenever `initial` changes (e.g. edit page finishes loading).
+    // Re-sync fields whenever `initial` changes (edit page finishes loading).
     create_effect(move |_| {
         let v = initial.get();
         set_name.set(v.name);
@@ -55,60 +50,86 @@ pub fn UserForm(
         on_submit.call(UserFormData { name: n, age: age.get(), dob: dob.get() });
     };
 
-    view! {
-        <div class="form-row">
-            <label>
-                "Name"
-                <input
-                    type="text"
-                    prop:value=move || name.get()
-                    prop:disabled=move || saving.get()
-                    on:input=move |ev| set_name.set(event_target_value(&ev))
-                />
-            </label>
+    // ---- Name field -----------------------------------------------------
+    let name_field = label()
+        .child("Name")
+        .child(
+            input()
+                .attr("type", "text")
+                .prop("value", move || name.get())
+                .prop("disabled", move || saving.get())
+                .on(ev::input, move |ev| set_name.set(event_target_value(&ev))),
+        );
 
-            <label>
-                "Age"
-                <input
-                    type="number"
-                    min="0"
-                    prop:value=move || age.get().to_string()
-                    prop:disabled=move || saving.get()
-                    on:input=move |ev| {
-                        let v = event_target_value(&ev).parse::<u32>().unwrap_or(0);
-                        set_age.set(v);
-                    }
-                />
-            </label>
+    // ---- Age field ------------------------------------------------------
+    let age_field = label()
+        .child("Age")
+        .child(
+            input()
+                .attr("type", "number")
+                .attr("min", "0")
+                .prop("value", move || age.get().to_string())
+                .prop("disabled", move || saving.get())
+                .on(ev::input, move |ev| {
+                    let v = event_target_value(&ev).parse::<u32>().unwrap_or(0);
+                    set_age.set(v);
+                }),
+        );
 
-            <label>
-                "Date of birth"
-                <DatePicker
-                    value=dob.into()
-                    on_change=move |d| set_dob.set(d)
-                />
-            </label>
+    // ---- DOB field (custom datepicker) ----------------------------------
+    let dob_field = label()
+        .child("Date of birth")
+        .child(DatePicker(
+            DatePickerProps::builder()
+                .value(dob.into())
+                .on_change(Callback::new(move |d| set_dob.set(d)))
+                .build(),
+        ));
 
-            <button on:click=submit prop:disabled=move || saving.get()>
-                <Show when=move || saving.get() fallback=|| view! { <></> }>
-                    <span class="spinner"></span>
-                </Show>
-                {move || submit_label.get()}
-            </button>
+    // ---- Submit button --------------------------------------------------
+    let submit_btn = button()
+        .on(ev::click, submit)
+        .prop("disabled", move || saving.get())
+        .child(move || {
+            if saving.get() {
+                span().classes("spinner").into_view()
+            } else {
+                ().into_view()
+            }
+        })
+        .child(move || submit_label.get());
 
-            {move || on_cancel.map(|cb| view! {
-                <button
-                    class="secondary"
-                    prop:disabled=move || saving.get()
-                    on:click=move |_| cb.call(())
-                >
-                    "Cancel"
-                </button>
-            })}
-        </div>
+    // ---- Cancel button (optional) --------------------------------------
+    let cancel_btn = move || {
+        on_cancel.map(|cb| {
+            button()
+                .classes("secondary")
+                .prop("disabled", move || saving.get())
+                .on(ev::click, move |_| cb.call(()))
+                .child("Cancel")
+                .into_view()
+        })
+    };
 
-        <Show when=move || error.get().is_some() fallback=|| view!{ <></> }>
-            <div class="error">{move || error.get().unwrap_or_default()}</div>
-        </Show>
-    }
+    // ---- Error line (conditional) --------------------------------------
+    let error_line = move || {
+        if let Some(msg) = error.get() {
+            div().classes("error").child(msg).into_view()
+        } else {
+            ().into_view()
+        }
+    };
+
+    // ---- Root: form row + error ----------------------------------------
+    (
+        div()
+            .classes("form-row")
+            .child(name_field)
+            .child(age_field)
+            .child(dob_field)
+            .child(submit_btn)
+            .child(cancel_btn),
+        error_line,
+    )
+        .into_view()
 }
