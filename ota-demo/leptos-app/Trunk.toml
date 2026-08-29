@@ -1,5 +1,0 @@
-[build]
-target = "index.html"
-dist = "dist"
-public_url = "./"     # relative paths — required when loaded from file:// or Capacitor
-release = true

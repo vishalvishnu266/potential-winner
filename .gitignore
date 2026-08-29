@@ -4,3 +4,8 @@ ota-demo/axum-server/target/
 ota-demo/axum-server/bundles/*.zip
 ota-demo/axum-server/bundles/latest.json
 ota-demo/capacitor-android/node_modules/
+
+# Leptos+Axum CRUD demo
+/target/
+/client/dist/
+/Cargo.lock
