@@ -8,7 +8,7 @@ use leptos::html::{button, div, input, label, span};
 use leptos::*;
 use shared::SimpleDate;
 
-use crate::datepicker::DatePicker;
+use crate::datepicker::{DatePicker, DatePickerProps};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct UserFormData {

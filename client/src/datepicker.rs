@@ -11,7 +11,7 @@
 //! Leptos primitives on display: `create_signal`, `create_memo`,
 //! `create_effect`, `Show`, `For`, `Callback`, `IntoView`.
 
-use leptos::html::{button, div, span, ElementDescriptor};
+use leptos::html::{button, div, ElementDescriptor};
 use leptos::*;
 use shared::SimpleDate;
 
@@ -192,7 +192,9 @@ pub fn DatePicker(
     let show_popup = Show(ShowProps::builder()
         .when(move || open.get())
         .fallback(|| ().into_view())
-        .children(ToChildren::to_children(move || popup().into_view()))
+        .children(ToChildren::to_children(move || {
+            Fragment::new(vec![popup().into_view()])
+        }))
         .build());
 
     // ---- Root -----------------------------------------------------------
