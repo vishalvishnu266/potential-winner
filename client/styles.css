@@ -120,42 +120,55 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
   color: var(--text);
   padding: 4px 8px;
   border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
 }
-.datepicker-header button:hover { background: #f3f4f6; }
+.datepicker-header button:hover { background: #f3f4f6; color: var(--text); }
 .datepicker-header .label { font-weight: 600; font-size: 14px; }
 .datepicker-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
 }
-.datepicker-dow, .datepicker-day {
+.datepicker-dow {
   text-align: center;
   padding: 6px 0;
   font-size: 12px;
   border-radius: 6px;
+  color: var(--muted);
+  font-weight: 600;
 }
-.datepicker-dow { color: var(--muted); font-weight: 600; }
-.datepicker-day {
+
+/* Higher-specificity selector so the global `button { ... }` rule
+   doesn't paint every day-cell blue-on-white. */
+.datepicker-grid button.datepicker-day {
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
+  border-radius: 6px;
   color: var(--text);
   font-size: 13px;
   font-weight: 500;
   line-height: 1;
   padding: 8px 0;
+  text-align: center;
 }
-.datepicker-day:hover {
+.datepicker-grid button.datepicker-day:hover {
   background: #eef2ff;
   border-color: #c7d2fe;
+  color: var(--text);
 }
-.datepicker-day.other { color: #94a3b8; }
-.datepicker-day.selected {
+.datepicker-grid button.datepicker-day.other {
+  color: #94a3b8;
+  background: transparent;
+}
+.datepicker-grid button.datepicker-day.selected {
   background: var(--primary);
   color: #ffffff;
   border-color: var(--primary);
 }
-.datepicker-day.selected:hover {
+.datepicker-grid button.datepicker-day.selected:hover {
   background: var(--primary-hover);
   color: #ffffff;
 }
