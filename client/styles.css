@@ -135,10 +135,41 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
   border-radius: 6px;
 }
 .datepicker-dow { color: var(--muted); font-weight: 600; }
-.datepicker-day { cursor: pointer; background: transparent; border: none; color: var(--text); }
-.datepicker-day:hover { background: #eef2ff; }
-.datepicker-day.other { color: #cbd5e1; }
+.datepicker-day {
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 8px 0;
+}
+.datepicker-day:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+.datepicker-day.other { color: #94a3b8; }
 .datepicker-day.selected {
   background: var(--primary);
-  color: white;
+  color: #ffffff;
+  border-color: var(--primary);
 }
+.datepicker-day.selected:hover {
+  background: var(--primary-hover);
+  color: #ffffff;
+}
+
+/* Small nav links used in page headers */
+.nav-links {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.nav-links a {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 14px;
+}
+.nav-links a:hover { text-decoration: underline; }
+.nav-links a.active { font-weight: 600; color: var(--text); }
