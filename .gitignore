@@ -1,0 +1,22 @@
+# Build output
+dist/
+*.wasm
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Capacitor generated
+android/
+ios/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Go
+*.exe
+*.test
+*.out

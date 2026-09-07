@@ -1,0 +1,150 @@
+/* components.css — reusable component styling */
+
+/* ---- AppBar ---------------------------------------------------- */
+.c-appbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.c-appbar__title {
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--fg);
+}
+.c-appbar__nav {
+  display: flex;
+  gap: var(--sp-4);
+}
+.c-appbar__link {
+  color: var(--fg-muted);
+  font-size: var(--font-md);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+}
+.c-appbar__link:hover {
+  color: var(--fg);
+  background: var(--bg-muted);
+  text-decoration: none;
+}
+
+/* ---- Buttons --------------------------------------------------- */
+.c-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 120ms ease, transform 60ms ease, border-color 120ms ease;
+  user-select: none;
+}
+.c-btn:active { transform: translateY(1px); }
+.c-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.c-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.c-btn--sm { padding: 6px 10px;  font-size: var(--font-sm); }
+.c-btn--md { padding: 10px 16px; font-size: var(--font-md); }
+.c-btn--lg { padding: 14px 22px; font-size: var(--font-lg); }
+.c-btn--full { width: 100%; }
+
+.c-btn--primary   { background: var(--primary);   color: var(--primary-fg); }
+.c-btn--primary:hover   { filter: brightness(1.05); }
+
+.c-btn--secondary { background: var(--secondary); color: var(--secondary-fg); }
+.c-btn--secondary:hover { filter: brightness(1.05); }
+
+.c-btn--ghost {
+  background: transparent;
+  color: var(--ghost-fg);
+  border-color: var(--border);
+}
+.c-btn--ghost:hover { background: var(--bg-muted); }
+
+.c-btn--danger    { background: var(--danger);    color: var(--danger-fg); }
+.c-btn--danger:hover    { filter: brightness(1.05); }
+
+/* ---- Card ------------------------------------------------------ */
+.c-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.c-card__header {
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--border);
+}
+.c-card__title    { margin: 0; font-size: var(--font-lg); font-weight: 600; }
+.c-card__subtitle { margin: 4px 0 0; color: var(--fg-muted); font-size: var(--font-sm); }
+.c-card__body     { padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* ---- Text ------------------------------------------------------ */
+.c-text        { margin: 0; }
+.c-text--h1    { font-size: var(--font-2xl); font-weight: 700; letter-spacing: -0.01em; }
+.c-text--h2    { font-size: var(--font-xl);  font-weight: 600; }
+.c-text--h3    { font-size: var(--font-lg);  font-weight: 600; }
+.c-text--body  { font-size: var(--font-md);  color: var(--fg); }
+.c-text--muted { font-size: var(--font-md);  color: var(--fg-muted); }
+.c-text--label { font-size: var(--font-sm);  color: var(--fg-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+/* ---- Form controls -------------------------------------------- */
+.c-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.c-field__label {
+  font-size: var(--font-sm);
+  color: var(--fg-muted);
+}
+.c-input,
+.c-select {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: var(--font-md);
+  width: 100%;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.c-input:focus,
+.c-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+/* ---- Divider --------------------------------------------------- */
+.c-divider {
+  height: 1px;
+  background: var(--border);
+  width: 100%;
+}
+
+/* ---- Badge ----------------------------------------------------- */
+.c-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.c-badge--primary   { background: var(--primary);   color: var(--primary-fg); }
+.c-badge--secondary { background: var(--secondary); color: var(--secondary-fg); }
+.c-badge--ghost     { background: transparent; color: var(--ghost-fg); border-color: var(--border); }
+.c-badge--danger    { background: var(--danger);    color: var(--danger-fg); }
