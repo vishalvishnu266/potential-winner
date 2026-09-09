@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
+  <component name="CargoProjects">
+    <cargoProject FILE="$PROJECT_DIR$/Cargo.toml">
+      <package file="$PROJECT_DIR$/client">
+        <feature name="default" enabled="true" />
+      </package>
+      <package file="$PROJECT_DIR$/server">
+        <feature name="default" enabled="true" />
+      </package>
+      <package file="$PROJECT_DIR$/shared">
+        <feature name="default" enabled="true" />
+      </package>
+    </cargoProject>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="f6429625-a382-49fe-8b15-d99bedae81f2" name="Changes" comment="vanilla vaadin style">
+      <change afterPath="$PROJECT_DIR$/preact/app.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/preact/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/client/src/app.rs" beforeDir="false" afterPath="$PROJECT_DIR$/client/src/app.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/main.rs" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+        <option value="JavaScript File" />
+        <option value="JSX File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="leptos" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RESET_MODE" value="HARD" />
+    <option name="UPDATE_TYPE" value="REBASE" />
+  </component>
+  <component name="MacroExpansionManager">
+    <option name="directoryName" value="56S4qVD2" />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.056727215258455" />
+      <entry key="MS500" value="1.657127057843288" />
+      <entry key="S2" value="2.419777620348923" />
+      <entry key="S5" value="2.739274322263097" />
+      <entry key="S10" value="3.025968631067674" />
+      <entry key="S30" value="4.549544817838921" />
+      <entry key="S60" value="5.800206795934256" />
+      <entry key="M2" value="6.745157987521366" />
+      <entry key="M5" value="7.454928481876914" />
+      <entry key="M10" value="7.719712588789148" />
+      <entry key="M15" value="7.811374816293119" />
+      <entry key="M30" value="7.904812803238241" />
+      <entry key="H1" value="7.976587347255293" />
+      <entry key="H2" value="8.834392494348812" />
+      <entry key="H4" value="13.217553900414412" />
+      <entry key="D1" value="45.17002103183224" />
+      <entry key="W1" value="112.69189162866843" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="2.5830944715890614E-194" />
+      <entry key="M2" value="1.607200818687278E-97" />
+      <entry key="M5" value="1.916143622252065E-39" />
+      <entry key="M10" value="4.37737777927844E-20" />
+      <entry key="M15" value="1.2420603153141767E-13" />
+      <entry key="M30" value="3.5242876093108174E-7" />
+      <entry key="H1" value="5.936571072016924E-4" />
+      <entry key="H2" value="0.024365079669308752" />
+      <entry key="H4" value="0.1560974322684033" />
+      <entry key="D1" value="2.0425593994831717" />
+      <entry key="W1" value="13.302618723589159" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.7267828649950423" />
+      <entry key="MS500" value="1.5200941591104171" />
+      <entry key="S2" value="2.34525623867958" />
+      <entry key="S5" value="2.7012915237914537" />
+      <entry key="S10" value="3.001769618851624" />
+      <entry key="S30" value="4.5287269036730144" />
+      <entry key="S60" value="5.784102530035777" />
+      <entry key="M2" value="6.734893877598803" />
+      <entry key="M5" value="7.45014848030917" />
+      <entry key="M10" value="7.717195896570554" />
+      <entry key="M15" value="7.809667712734796" />
+      <entry key="M30" value="7.903944644488491" />
+      <entry key="H1" value="7.976738541875829" />
+      <entry key="H2" value="8.85845461705844" />
+      <entry key="H4" value="13.373285876726243" />
+      <entry key="D1" value="47.21232029107956" />
+      <entry key="W1" value="125.9944113603564" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3HcQQZ06wWDsd5B7TbCeheRTyXb" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "CidrDebugProfileConversion": "true",
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.rust.reset.selective.auto.import": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "demo",
+    "git.auto.fetch.suggestion.counter": "1",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "/Users/macbook/vishal/potential-winner/task-app-native/www",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "npm.android.executor": "Run",
+    "npm.android:customer.executor": "Run",
+    "npm.api:codegen.executor": "Run",
+    "npm.api:export.executor": "Run",
+    "npm.api:sync.executor": "Run",
+    "npm.build (1).executor": "Run",
+    "npm.build.executor": "Run",
+    "npm.build:prod.executor": "Run",
+    "npm.bundle:ota (1).executor": "Run",
+    "npm.bundle:ota.executor": "Run",
+    "npm.bundle:ota:customer.executor": "Run",
+    "npm.customer > build:dev.executor": "Run",
+    "npm.customer > dev.executor": "Run",
+    "npm.dev.executor": "Run",
+    "npm.dev:customer.executor": "Run",
+    "npm.dev:worker.executor": "Run",
+    "npm.ota.executor": "Run",
+    "npm.postinstall.executor": "Run",
+    "npm.preview.executor": "Run",
+    "npm.release:ota.executor": "Run",
+    "npm.release:ota:customer.executor": "Run",
+    "npm.seed.executor": "Run",
+    "npm.seed:web.executor": "Run",
+    "npm.server.executor": "Run",
+    "npm.server:prod.executor": "Run",
+    "npm.sync:customer.executor": "Run",
+    "npm.sync:shared.executor": "Run",
+    "npm.worker > build.executor": "Run",
+    "npm.worker > dev.executor": "Run",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.cargo.project.model.impl.CargoExternalSystemProjectAware.subscribe.first.balloon": "",
+    "org.rust.first.attach.projects": "true",
+    "settings.editor.selected.configurable": "configurable.tailwindcss",
+    "to.speed.mode.migration.done": "true",
+    "ts.external.directory.path": "/Applications/RustRover.app/Contents/plugins/javascript-plugin/jsLanguageServicesImpl/external"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/task-app-native/www" />
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="npm.server:prod">
+    <configuration name="release:ota:customer" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="release:ota:customer" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="server" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="server" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="server:prod" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="server:prod" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="sync:customer" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="sync:customer" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="sync:shared" type="js.build_tools.npm" temporary="true" nameIsGenerated="true">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="sync:shared" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="npm.server:prod" />
+        <item itemvalue="npm.sync:shared" />
+        <item itemvalue="npm.release:ota:customer" />
+        <item itemvalue="npm.sync:customer" />
+        <item itemvalue="npm.server" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="RustProjectSettings">
+    <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="f6429625-a382-49fe-8b15-d99bedae81f2" name="Changes" comment="" />
+      <created>1786164861938</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1786164861938</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="OMMIT" />
+    <MESSAGE value="vanilla vaadin style" />
+    <option name="LAST_COMMIT_MESSAGE" value="vanilla vaadin style" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
